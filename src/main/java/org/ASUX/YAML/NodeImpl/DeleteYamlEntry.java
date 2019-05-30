@@ -35,11 +35,20 @@ package org.ASUX.YAML.NodeImpl;
 import org.ASUX.yaml.YAMLPath;
 
 import org.ASUX.common.Tuple;
-import org.ASUX.common.Output;
 
-// import java.util.Map;
 import java.util.LinkedList;
-import java.util.LinkedHashMap;
+
+// https://yaml.org/spec/1.2/spec.html#id2762107
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.nodes.NodeTuple;
+import org.yaml.snakeyaml.nodes.NodeId;
+import org.yaml.snakeyaml.nodes.Node;
+import org.yaml.snakeyaml.nodes.ScalarNode;
+import org.yaml.snakeyaml.nodes.MappingNode;
+import org.yaml.snakeyaml.nodes.SequenceNode;
+import org.yaml.snakeyaml.nodes.Tag;
+import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
+
 
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.yaml.AbstractYamlEntryProcessor}.</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
@@ -50,21 +59,18 @@ import java.util.LinkedHashMap;
  */
 public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
 
-    public static final String CLASSNAME = "org.ASUX.yaml.DeleteYamlEntry";
+    public static final String CLASSNAME = DeleteYamlEntry.class.getName();
 
-    protected final LinkedList< Tuple< String,LinkedHashMap<String, Object> > > keys2bRemoved = new LinkedList<>();
+    protected final LinkedList< Tuple< Node, Object> > keys2bRemoved = new LinkedList<>();
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _showStats Whether you want a final summary onto console / System.out
+     *  @param _do instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
      */
-    public DeleteYamlEntry( final boolean _verbose, final boolean _showStats ) {
-        super( _verbose, _showStats );
-    }
-
-    private DeleteYamlEntry() {
-        super( false, true );
+    public DeleteYamlEntry( final boolean _verbose, final boolean _showStats, final DumperOptions _d ) {
+        super( _verbose, _showStats, _d );
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -73,8 +79,8 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
     /** This function will be called when a partial match of a YAML path-expression happens.
      * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onPartialMatch()
      */
-    protected boolean onPartialMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
-
+    protected boolean onPartialMatch( final Node _node, final YAMLPath _yamlPath, final String _keyStr, final Node _parentNode, final LinkedList<String> _end2EndPaths )
+    {    
         // Do Nothing for "delete YAML-entry command"
         return true;
     }
@@ -83,7 +89,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
     /** This function will be called when a full/end2end match of a YAML path-expression happens.
      * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch()
      */
-    protected boolean onEnd2EndMatch(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths)
+    protected boolean onEnd2EndMatch( final YAMLPath _yamlPath, final Object _key, final Node _keyNode, final Node _valNode, final Node _parentNode, final LinkedList<String> _end2EndPaths )
     {
         if ( this.verbose )
             System.out.print("onEnd2EndMatch: _end2EndPaths =");
@@ -92,7 +98,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
             System.out.println("");
         }
 
-        this.keys2bRemoved.add( new Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
+        this.keys2bRemoved.add( new Tuple< Node, Object>( _parentNode, _key ) );
         if ( this.verbose ) System.out.println( CLASSNAME +": onE2EMatch: count="+this.keys2bRemoved.size());
         return true;
     }
@@ -101,8 +107,8 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
     /** This function will be called whenever the YAML path-expression fails to match.
      * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onMatchFail()
      */
-    protected void onMatchFail(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths) {
-
+    protected void onMatchFail( final YAMLPath _yamlPath, final Node _parentNode, final Node _nodeNoMatch, final Object _key, final LinkedList<String> _end2EndPaths )
+    {    
         // Do Nothing for "delete YAML-entry command"
     }
 
@@ -113,14 +119,53 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
      *
      * You can fuck with the contents of any of the parameters passed, to your heart's content.
      */
-    protected void atEndOfInput(final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath) {
-
+    protected void atEndOfInput( final Node _node, final YAMLPath _yamlPath ) throws Exception
+    {    
         if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): count=" + this.keys2bRemoved.size() );
-        for (Tuple< String, LinkedHashMap<String, Object> > tpl: this.keys2bRemoved ) {
-            final String rhsStr = tpl.val.toString();
-            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): atEndOfInput: "+ tpl.key +": "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
-            tpl.val.remove(tpl.key);
-        }
+        for ( Tuple< Node, Object> tpl: this.keys2bRemoved ) {
+            final Node parentN = tpl.key;
+            // final String rhsStr = tpl.val.toString();
+            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): item["+ tpl.val.getClass().getName() +"]= "+ tpl.val +"  within parentN["+ parentN.getClass().getName() +"]="+ tpl.key +" " );
+            // if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): atEndOfInput: parentN="+ tpl.key +": item["+ tpl.val.getClass().getName() +"]= "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
+            if ( tpl.val instanceof String && parentN instanceof MappingNode ) {
+                assert( tpl.val instanceof String ); 
+                final String key2Search = (String) tpl.val;
+
+                final MappingNode mapN = (MappingNode) parentN;
+                final java.util.List<NodeTuple> tuples = mapN.getValue();
+                // iterate thru tuples and find 'key2Search' as a ScalarNode for Key/LHS.
+                int ix = -1;
+                boolean bFound = false;
+                for( NodeTuple kv: tuples ) {
+                    ix ++;
+                    final Node keyN = kv.getKeyNode();
+                    assert( keyN instanceof ScalarNode );
+                    assert( keyN.getNodeId() == NodeId.scalar ); // if assert fails, what scenario does that represent?
+                    // @SuppressWarnings("unchecked")
+                    final ScalarNode scalarN = (ScalarNode) keyN;
+                    final String keyAsStr = scalarN.getValue();
+                    assert( keyAsStr != null );
+                    if ( this.verbose ) System.out.println( CLASSNAME +" atEndOfInput(): found LHS, keyTag & RHS = ["+ keyN + "] !"+ scalarN.getTag().getValue() + " : "+ kv.getValueNode() + " ;" );
+                    if ( keyAsStr.equals(key2Search) ) {
+                        bFound = true;
+                        break;
+                    }
+                } // for loop
+                if ( bFound )
+                    tuples.remove( ix );
+
+            } else if ( tpl.val instanceof Integer && parentN instanceof SequenceNode ) {
+                assert( tpl.val instanceof Integer ); 
+                final Integer ix = (Integer) tpl.val;
+
+                final SequenceNode seqN = (SequenceNode) tpl.key;
+                final java.util.List<Node> seqs = seqN.getValue();
+                seqs.remove( ix.intValue() );
+            } else {
+                throw new Exception( CLASSNAME +": atEndOfInput(): UNEXPECTED item["+ tpl.val.getClass().getName() +"]= "+ tpl.val +"  within parentN["+ parentN.getClass().getName() +"]="+ tpl.key +" " );
+            }
+        } // for
+
         // java's forEach never works if you are altering anything within the Lambda body
         // this.keys2bRemoved.forEach( tpl -> {tpl.val.remove(tpl.key); });
         if ( this.showStats ) System.out.println( "count="+this.keys2bRemoved.size() );

@@ -35,11 +35,23 @@ package org.ASUX.YAML.NodeImpl;
 import org.ASUX.yaml.YAMLPath;
 
 import org.ASUX.common.Tuple;
-import org.ASUX.common.Output;
 
+import java.util.List;
 import java.util.LinkedList;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+
+
+// https://yaml.org/spec/1.2/spec.html#id2762107
+import org.yaml.snakeyaml.nodes.NodeTuple;
+import org.yaml.snakeyaml.nodes.NodeId;
+import org.yaml.snakeyaml.nodes.Node;
+import org.yaml.snakeyaml.nodes.ScalarNode;
+import org.yaml.snakeyaml.nodes.MappingNode;
+import org.yaml.snakeyaml.nodes.SequenceNode;
+import org.yaml.snakeyaml.nodes.Tag;
+import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/error/Mark.java
+import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
+
 
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.yaml.AbstractYamlEntryProcessor}.</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
@@ -50,15 +62,18 @@ import java.util.LinkedHashMap;
  */
 public class InsertYamlEntry extends AbstractYamlEntryProcessor {
 
-    public static final String CLASSNAME = "org.ASUX.yaml.InsertYamlEntry";
+    public static final String CLASSNAME = InsertYamlEntry.class.getName();
 
     // Note: We need to remove the "old" - exactly as DeleteYamlEntry.java does.  Then we insert new value.
-    protected final ArrayList< Tuple< String, LinkedHashMap<String, Object> > >
+    protected final ArrayList< Tuple<Object, Node> >
                     existingPathsForInsertion = new ArrayList<>();
-    protected final ArrayList< Tuple< YAMLPath, LinkedHashMap<String, Object> > >
+    protected final ArrayList< Tuple< YAMLPath, Node> >
                     newPaths2bCreated = new ArrayList<>();
 
-    protected Object newData2bInserted = "";
+    protected final Object newData2bInserted;
+    protected final Node newNode2bInserted;
+
+    protected Node output;
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -66,80 +81,62 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
 
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
-     *  @param _nob this can be either a java.lang.String or a java.util.LinkedHashMap&lt;String, Object&gt; (created by YAMLReader classes from various libraries)
      *  @param _showStats Whether you want a final summary onto console / System.out
+     *  @param _do instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
+     *  @param _nob this can be either a java.lang.String or a org.yaml.snakeyaml.nodes.Node object
      *  @throws java.lang.Exception - if the _nob parameter is not as per above Spec
      */
-    public InsertYamlEntry( final boolean _verbose, final boolean _showStats, Object _nob ) throws Exception {
-        super( _verbose, _showStats );
+    public InsertYamlEntry( final boolean _verbose, final boolean _showStats, final DumperOptions _d, Object _nob ) throws Exception
+    {
+        super( _verbose, _showStats, _d );
+
+        final String HDR = CLASSNAME +": Constructor: ";
         if ( _nob == null )
-            throw new Exception( CLASSNAME + ": constructor(): _nob parameter is Null");
+            throw new Exception( HDR +"_nob parameter is Null" );
+
         this.newData2bInserted = _nob;
+        this.newNode2bInserted = validateNewContent( _nob );
 
-        // final Output output = new Output(this.verbose);
-        // final Tools tools = new Tools( this.verbose );
-        // final Output.OutputType typ = output.getWrappedObjectType( _nob );
-
-        // Object o = output.getTheActualObject( _nob ); // perhaps the object is already wrapped (via a prior invocation of output.wrapAnObject_intoLinkedHashMap() )
-        // if (this.verbose) System.out.println( CLASSNAME +": constructort(): provided ["+ _nob.toString() +"].  I assume the actual object of type=["+ typ.toString() +"]=["+ o.toString() +"]" );
-
-        // // for the following SWITCH-statement, keep an eye on Output.OutputType
-        // switch( typ ) {
-        //     case Type_ArrayList:
-        //     case Type_LinkedList:
-        //     case Type_KVPairs:
-        //     case Type_LinkedHashMap:
-        //         // Do Nothing
-        //         this.newData2bInserted = o;
-        //         break;
-        //     case Type_String:
-        //         this.newData2bInserted = tools.string2Object( o.toString() );
-        //         // final String s = o.toString();
-        //         // // Convert Strings into YAML/JSON compatible LinkedHashMap .. incl. converting Key=Value  --> Key: Value
-        //         // LinkedHashMap<String, Object> map = null; // let's determine if o is to be treated as a LinkedHashMap.. because user provided a JSON or YAML inline to the command line.
-
-        //         // // IF-and-ONLY-IF _nob is a simple-scalar-String, then this call will wrap the String by calling output.wrapAnObject_intoLinkedHashMap()
-        //         // try{
-        //         //     // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
-        //         //     // and less likely to see a YAML string inline
-        //         //     map = tools.JSONString2YAML( s );
-        //         // } catch( Exception e ) {
-        //         //     if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ s +"): FAILED-attempted to PARSE as JSON." );
-        //         //     try {
-        //         //         // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
-        //         //         // and less likely to see a YAML string inline
-        //         //         map = tools.YAMLString2YAML( s, false );  // 2nd parameter is 'bWrapScalar' === false;.  if 's' turns out to be scalar at this point.. I want to go into the catch() block below and handle it there.
-        //         //     } catch(Exception e2) {
-        //         //         if (this.verbose) System.out.println( CLASSNAME +": getDataFromReference("+ s +"): FAILED-attempted to PARSE as YAML also!  So.. treating it as a SCALAR string." );
-        //         //         map = null; // The user provided a !!!SCALAR!!! java.lang.String directly - to be used AS-IS
-        //         //     }
-        //         // } // outer-try-catch
-
-        //         // this.newData2bInserted = (map != null)? map : o;
-        //         // // if ( s.equals( output.getTheActualObject(map).toString() ) )
-        //         // //     o = s; // IF-and-ONLY-IF _nob is a simple-scalar-String, then use it as-is.
-        //         break;
-        //     case Type_KVPair:
-        //     case Type_Unknown:
-        //         throw new Exception( CLASSNAME + ": constructor(): Invalid _nob parameter of type:" + _nob.getClass().getName() + "'");
-        // } // switch
+        assert( _nob instanceof String || _nob instanceof Node );
     } // function
 
+    //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-    private InsertYamlEntry() {
-        super( false, true );
+    //==============================================================================
+
+    /**
+     * <p>If the _nob (the new content provided as the ONLY parameter to the INSERT/REPLACE YAML command) is a Node.. then, do Nothing</p>
+     * <p>If the _nob (the new content provided as the ONLY parameter to the INSERT/REPLACE YAML command) is a java.lang.String.. then, convert it into a org.yaml.snakeyaml.nodes.ScalarNode.</p>
+     * <p>Otherwise throw an exception</p>
+     * @param _nob the new content provided as the ONLY parameter to the INSERT/REPLACE YAML command
+     *  @throws java.lang.Exception - if the _nob parameter is not as per above Spec
+     */
+    public final Node validateNewContent( final Object _nob ) throws Exception
+    {
+        final String HDR = CLASSNAME +": validateNewContent(): ";
+        Node tmpO = null;
+        if ( this.verbose ) System.out.println( HDR +"  _nob type= "+ _nob.getClass().getName() +" (_nob instanceof Node)= "+ (_nob instanceof Node) );
+        if ( _nob instanceof Node ) {
+            tmpO = (Node) _nob;
+        } else if ( _nob instanceof String ) {
+            final ScalarNode newnode = new ScalarNode( Tag.STR, _nob.toString(), null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
+            if ( this.verbose ) System.out.println( HDR +" new ScalarNode="+ newnode );
+            tmpO = newnode;
+        } else {
+            throw new Exception( HDR +": Serious ERROR: Your new content of type ["+ _nob.getClass().getName() +"]  with value = ["+ _nob.toString() +"]");
+        }
+        return tmpO;
     }
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
-    
+
     /** This function will be called when a partial match of a YAML path-expression happens.
      * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onPartialMatch}
      */
-    protected boolean onPartialMatch( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths ) {
-
-        // Do Nothing for "Insert YAML-entry command"
+    protected boolean onPartialMatch( final Node _node, final YAMLPath _yamlPath, final String _keyStr, final Node _parentNode, final LinkedList<String> _end2EndPaths )
+    {   // Do Nothing for "Insert YAML-entry command"
         return true;
     }
 
@@ -147,15 +144,17 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     /** This function will be called when a full/end2end match of a YAML path-expression happens.
      * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch}
      */
-    protected boolean onEnd2EndMatch( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths ) {
-
-        if ( this.verbose ) {
-            System.out.print( CLASSNAME +": onEnd2EndMatch(): _end2EndPaths =");
+    protected boolean onEnd2EndMatch( final YAMLPath _yamlPath, final Object _key, final Node _keyNode, final Node _valNode, final Node _parentNode, final LinkedList<String> _end2EndPaths )
+    {
+        final String HDR = CLASSNAME +": onEnd2EndMatch(): ";
+        if ( this.verbose )
+            System.out.print( HDR +"_end2EndPaths=");
+        if ( this.verbose || this.showStats ) {
             _end2EndPaths.forEach( s -> System.out.print(s+", ") );
             System.out.println("");
         }
-        this.existingPathsForInsertion.add( new Tuple< String, LinkedHashMap<String, Object> >(_key, _map) );
-        if ( this.verbose ) System.out.println( CLASSNAME +": onE2EMatch(): count="+this.existingPathsForInsertion.size());
+        this.existingPathsForInsertion.add( new Tuple<Object, Node>( _key, _parentNode ) );
+        if ( this.verbose ) System.out.println( HDR +"count="+this.existingPathsForInsertion.size() +" _parentNode="+ _parentNode );
         return true;
     }
 
@@ -163,16 +162,18 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     /** This function will be called whenever the YAML path-expression fails to match.
      * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onMatchFail}
      */
-    protected void onMatchFail( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath, final String _key, final LinkedHashMap<String, Object> _parentMap, final LinkedList<String> _end2EndPaths )
+    protected void onMatchFail( final YAMLPath _yamlPath, final Node _parentNode, final Node _nodeNoMatch, final Object _key, final LinkedList<String> _end2EndPaths )
     {
+        final String HDR = CLASSNAME +": onMatchFail(): ";
+        if ( this.verbose ) System.out.println( HDR +">>>>>>>>>>>> _yamlPath="+ _yamlPath );
+        if ( this.verbose ) System.out.println( HDR +">>>>>>>>>>>> _parentNode="+ _parentNode );
         // we are going to have TONS and TONS of entries within this.newPaths2bCreated !!!
         // Especially for large YAML files - let's say - 1000 lines, then.. you could see a couple of hundred entries
         // Also, we'll have SO MANY DUPLICATES!
-        if ( _yamlPath == null || _map == null )
+        if ( _yamlPath == null || _parentNode == null )
             return;
-        final Tuple< YAMLPath, LinkedHashMap<String, Object> > tuple = new Tuple<>( YAMLPath.deepClone(_yamlPath), _map );
-        if ( this.verbose ) System.out.println( CLASSNAME +": onMatchFail():>>>>>>>>>>>> _yamlPath="+ _yamlPath.toString() );
-        if ( this.verbose ) System.out.println( CLASSNAME +": onMatchFail():>>>>>>>>>>>> tuple="+ tuple.key );
+        final Tuple< YAMLPath, Node > tuple = new Tuple<>( YAMLPath.deepClone(_yamlPath), _parentNode );
+        if ( this.verbose ) System.out.println( HDR +">>>>>>>>>>>> tuple="+ tuple );
         this.newPaths2bCreated.add( tuple );
     }
 
@@ -180,85 +181,130 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
-    /** This function will be called when processing has ended.
-     * After this function returns, the AbstractYamlEntryProcessor class is done!
-     * See details and warnings in {@link AbstractYamlEntryProcessor#atEndOfInput}
-     *
+    /** See details and warnings in {@link AbstractYamlEntryProcessor#atEndOfInput}
      * You can fuck with the contents of any of the parameters passed, to your heart's content.
-     *  @throws Exception like ClassNotFoundException while trying to serialize and deserialize the input-parameter
      */
-    protected void atEndOfInput( final LinkedHashMap<String, Object> _map, final YAMLPath _yamlPath ) throws Exception
+    // *  @param _TopmostNode the topmost Node in the input YAML
+    // *  @throws Exception like ClassNotFoundException while trying to serialize and deserialize the input-parameter
+    protected void atEndOfInput( final Node _TopmostNode, final YAMLPath _yamlPath ) throws Exception
     {
-        if ( YAMLPath.ROOTLEVEL.equals( _yamlPath.getRaw() ) ) // '/' is the entire YAML-Path pattern
+        final String HDR = CLASSNAME + ": atEndOfInput(): ";
+
+        this.output = (Node) _TopmostNode; // this should handle all scenarios - except when '/' is the YAML path.
+
+        if ( YAMLPath.ROOTLEVEL.equals( _yamlPath.getRaw() ) ) // '/' is exactly the entire YAML-Path pattern provided by the user on the cmd line
         {
-            final Output output = new Output( this.verbose );
-            final Output.OutputType typ = output.getWrappedObjectType( this.newData2bInserted );
-    
-            switch(typ) {
-                case Type_KVPair:  // singular;  No 's' character @ end.  This is Not KVPairs
-                    @SuppressWarnings("unchecked")
-                    final Tuple< String,String > kvpair = ( Tuple< String,String > ) this.newData2bInserted;
-                    _map.put( kvpair.key, kvpair.val );
-                    break;
-                case Type_KVPairs:  // PLURAL;  Note the 's' character @ end.  This is Not KVPair (singular)
-                case Type_LinkedHashMap:
-                    @SuppressWarnings("unchecked")
-                    final LinkedHashMap<String, Object> newmap = (LinkedHashMap<String, Object>) this.newData2bInserted;
-                    _map.putAll( newmap );
-                    break;
-
-                case Type_String:
-                case Type_ArrayList: // array of arrays?  What am I going to do?  What does such a data structure mean? In what real-world use-case scenario?
-                case Type_LinkedList:
-                case Type_Unknown:
-                    throw new Exception( CLASSNAME +": atEndOfInput(): Serious ERROR: You want to insert @ /, but provided newYaml that is of type ["+ typ.toString() +"]  with value = ["+ this.newData2bInserted.toString() +"]");
-            } // end switch
-
-            return;
-            // ATTENTION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // function returns here
+            if ( this.newNode2bInserted instanceof MappingNode ) {
+                this.output = (MappingNode) this.newData2bInserted;
+            } else if ( this.newNode2bInserted instanceof SequenceNode ) {
+                this.output = (SequenceNode) this.newData2bInserted;
+            } else if ( this.newNode2bInserted instanceof Node ) {
+                this.output = (Node) this.newData2bInserted;
+            // } else if ( this.newData2bInserted instanceof String ) {
+            //     final ScalarNode newnode = new ScalarNode( Tag.STR, this.newData2bInserted.toString(), null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
+            //     this.output = newnode; // !!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!! this.output is Not set to the 'default' == whatever was provided as input YAML for INSERT-Cmd
+            } else {
+                throw new Exception( HDR +": Serious ERROR: You wanted to insert new content at / .. .. but provided content that is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted.toString() +"]");
+            }
+            return; // !!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!! This function returns here.
         }
+        // !!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!!
+        // If you want to use INSERT-CMD using '/' to add a ___2nd___ YAML document to an existing-YAML-file.. it will NOT WORK!!!
+        // Instead, use bash-shell-level commands to concatenate files;.
 
+        //-------------------------------------------------
         // first loop goes over Paths that already exist, in the sense the leaf-element exists, and we'll add a new Child element to that.
-        for ( Tuple< String, LinkedHashMap<String, Object> > tpl: this.existingPathsForInsertion ) {
+        OUTERFORLOOP:
+        for ( Tuple<Object, Node> tpl: this.existingPathsForInsertion ) {
             final String rhsStr = tpl.val.toString();
-            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): key=["+ tpl.key +"], while map-in-context="+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()) );
+            if ( this.verbose ) System.out.println( HDR +": key=["+ tpl.key +"], while map-in-context="+ rhsStr.substring(0,rhsStr.length()>241?240:rhsStr.length()) );
             // tpl.val.remove(tpl.key);
 
-            // Now put in a new entry - with the replacement data!
-            tpl.val.put( tpl.key, org.ASUX.common.Utils.deepClone( this.newData2bInserted ) );
-            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): key=["+ tpl.key +"], it's new value="+ this.newData2bInserted.toString() );
-            // If there are multiple matches.. then without deepclone, the YAML implementation libraries (like Eso teric Soft ware)
-            // library, will use "&1" to define your 1st copy (in output) and put "*1" in
-            // all other locations this replacement text WAS SUPPOSED have been :-(
+            if ( tpl.key instanceof String && tpl.val instanceof MappingNode ) {
+                final String key2Search = (String) tpl.key; // could be null, even if code is not buggy
+
+                final MappingNode mapN = (MappingNode) tpl.val;
+                final java.util.List<NodeTuple> tuples = mapN.getValue();
+                // iterate thru tuples and find 'key2Search' as a ScalarNode for Key/LHS.
+                int ix = -1;
+                boolean bFound = false;
+                NodeTuple newTuple = null;
+                for( NodeTuple kv: tuples ) {
+                    ix ++;
+                    final Node keyN = kv.getKeyNode();
+                    assert( keyN instanceof ScalarNode );
+                    assert( keyN.getNodeId() == NodeId.scalar ); // if assert fails, what scenario does that represent?
+                    final ScalarNode scalarN = (ScalarNode) keyN;
+                    final String keyAsStr = scalarN.getValue();
+                    assert( keyAsStr != null );
+                    if ( this.verbose ) System.out.println( CLASSNAME +" atEndOfInput(): found LHS, keyTag & RHS = ["+ keyN + "] !"+ scalarN.getTag().getValue() + " : "+ kv.getValueNode() + " ;" );
+
+                    if ( keyAsStr.equals(key2Search) ) {
+                        bFound = true;
+                        // Now put in a new entry - with the replacement data!  This is because NodeTuple is immutable, so it needs to be replaced (within tuples) with a new instance.
+                        // newTuple = new NodeTuple( keyN, NodeTools.deepClone( this.newNode2bInserted ) );
+                        doInsertBasedOnNodeType( mapN, key2Search, NodeTools.deepClone( this.newNode2bInserted ) ); // This command will CHANGE the 'tuples' iterator used for the INNER FOR LOOP!!!!!
+                        // If there are multiple matches.. then without deepclone, the YAML implementation libraries (like Eso teric Soft ware)
+                        // library, will use "&1" to define your 1st copy (in output) and put "*1" in
+                        // all other locations this replacement text WAS SUPPOSED have been :-(
+                        if ( this.verbose ) System.out.println( HDR +": key=["+ tpl.key +"], it's new value="+ this.newData2bInserted );
+
+                        // break out of INNER for loop ( NodeTuple kv: tuples )
+                        continue OUTERFORLOOP;
+                    } // if
+                } // INNER for loop
+                assert( true ); // we should Not be here.  the bFound must be true WITHIN the Inner-For-Loop.
+                // Semantically, it makes NO sense that we have an entry in 'this.existingPathsForInsertion' that is NOT in 'mapN'
+
+            } else if ( tpl.key instanceof Integer && tpl.val instanceof SequenceNode ) {
+                final Integer ix = (Integer) tpl.key;
+
+                final SequenceNode seqN = (SequenceNode) tpl.val;
+                final java.util.List<Node> seqs = seqN.getValue();
+                seqs.add( ix.intValue(), this.newNode2bInserted );
+
+            } else {
+                throw new Exception( CLASSNAME +": atEndOfInput(): UNEXPECTED Node/Tpl2["+ tpl.key.getClass().getName() +"]="+ tpl.key +" and the Key/Ref/Tpl1["+ tpl.val.getClass().getName() +"]= "+ tpl.val +" " );
+            }
+        } // OUTER for loop
+
+        if ( this.existingPathsForInsertion.size() >= 1 ) {
+            if ( this.showStats ) System.out.println( "count="+ this.existingPathsForInsertion.size() );
+            if ( this.showStats ) this.existingPathsForInsertion.forEach( tpl -> { System.out.println(tpl.key); } );
+            return; // !!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!! This function returns here.
         }
+        // else continue below.
+
+        //------------------------------------------------
+        // if we are here, it means the YAMLPathRegExpr provided by user (via command-line) did Not match ANY EXACT YAML-contents.   That is, this.existingPathsForInsertion is 'empty'
+        // By implication, it means there are ____MEANINGFUL_____ entries in this.newPaths2bCreated
 
         //------------------------------------------------
         // IMPORTANT: See the comments inside onMatchFail
         // We need to 'cull' the entries within this.newPaths2bCreated
         int longestDepth = -1;
-        for ( Tuple< YAMLPath, LinkedHashMap<String, Object> > tpl : this.newPaths2bCreated ) {
+        for ( Tuple< YAMLPath, Node > tpl : this.newPaths2bCreated ) {
             final YAMLPath yp = tpl.key;
+            if ( this.verbose ) System.out.println( HDR +": newPaths2bCreated tpl.key="+ tpl.key +"  tpl.value="+ tpl.val +" ");
             if ( yp.index()> longestDepth ) longestDepth = yp.index();
         }
 
-        if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): longestDepth ="+ longestDepth +"]" );
-        final ArrayList< Tuple< YAMLPath, LinkedHashMap<String, Object> > >
-                    deepestNewPaths2bCreated = new ArrayList<>();
+        if ( this.verbose ) System.out.println( HDR +": longestDepth ="+ longestDepth +"]" );
+        final ArrayList< Tuple< YAMLPath, Node > > deepestNewPaths2bCreated = new ArrayList<>();
 
         outerloop:
-        for ( Tuple< YAMLPath, LinkedHashMap<String, Object> > tpl : this.newPaths2bCreated ) {
+        for ( Tuple< YAMLPath, Node > tpl : this.newPaths2bCreated ) {
             final YAMLPath ypNew = tpl.key;
-            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): ypNew ="+ ypNew +"]" );
+            if ( this.verbose ) System.out.println( HDR +": ypNew ="+ ypNew +"]" );
             if ( ypNew.index() >= longestDepth ) {
                 // let's check .. have we added it already?
-                for ( Tuple< YAMLPath, LinkedHashMap<String, Object> > tpl2 : deepestNewPaths2bCreated ) {
+                for ( Tuple< YAMLPath, Node > tpl2 : deepestNewPaths2bCreated ) {
                     final YAMLPath ypE = tpl2.key;
                     if ( YAMLPath.areEquivalent( ypNew, ypE ) )
                         continue outerloop;
                 } // inner for-loop
                 deepestNewPaths2bCreated.add ( tpl );
-                if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): added new entry "+tpl.key +" making deepestNewPaths2bCreated's size ="+ deepestNewPaths2bCreated.size() +"] for the newContent=/"+ tpl.val.toString() +"/" );
+                if ( this.verbose ) System.out.println( HDR +": added new entry "+tpl.key +" making deepestNewPaths2bCreated's size ="+ deepestNewPaths2bCreated.size() +"] for the newContent=/"+ tpl.val.toString() +"/" );
             }
         } // outer for-loop
         // going forward.. ignore this.newPaths2bCreated
@@ -267,34 +313,117 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
         //------------------------------------------------
         // This 2nd loop is going to deal with WITH MISSING 'paths' to the missing leaf-element.
         // similar to how 'mkdir -p' works on Linux.
-        if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): deepestNewPaths2bCreated.size()="+ deepestNewPaths2bCreated.size() +"]" );
-        for ( Tuple< YAMLPath, LinkedHashMap<String, Object> > tpl : deepestNewPaths2bCreated ) {
+        if ( this.verbose ) System.out.println( HDR +": deepestNewPaths2bCreated.size()="+ deepestNewPaths2bCreated.size() +"]" );
+        for ( Tuple< YAMLPath, Node > tpl : deepestNewPaths2bCreated ) {
             final YAMLPath yp = tpl.key;
-            final LinkedHashMap<String, Object> lowestmap = tpl.val;
+            final Node lowestExistingNode = tpl.val;
             final String prefix = yp.getPrefix();
             final String suffix = yp.getSuffix();
-            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): about to.. add the NEW path ["+ suffix +"]" );
-            Object prevchildelem = this.newData2bInserted;
-            for( int ix=yp.yamlElemArr.length - 1;   ix > yp.index() ; ix-- ) {
-                // ATTENTION !!!!!!!!!!!!!!!!!!!!!!!!!!!! This iterator / for-loop counts DOWN.
-                final LinkedHashMap<String, Object> newelem = new LinkedHashMap<>();
-                newelem.put ( yp.yamlElemArr[ix], prevchildelem );
-                prevchildelem = newelem;
-                if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): added the NEW path @ "+ ix +" yp.yamlElemArr[ix]="+ yp.yamlElemArr[ix] +"  newelem= ["+ newelem.toString() +"]" );
+            if ( this.verbose ) System.out.println( HDR +": about to.. add the NEW path ["+ suffix +"]" );
+            Node prevchildelem;
+            if ( this.newData2bInserted instanceof MappingNode ) {
+                prevchildelem = (MappingNode) this.newData2bInserted;
+            } else if ( this.newData2bInserted instanceof SequenceNode ) {
+                prevchildelem = (SequenceNode) this.newData2bInserted;
+            } else if ( this.newData2bInserted instanceof Node ) {
+                prevchildelem = (Node) this.newData2bInserted;
+            } else if ( this.newData2bInserted instanceof String ) {
+                prevchildelem = new ScalarNode( Tag.STR, this.newData2bInserted.toString(), null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
+            } else {
+                throw new Exception( HDR +": Serious ERROR #2: You wanted to insert new content at / .. .. but provided content that is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted +"]");
             }
-            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): Adding the final MISSING Path-elem @ ["+ yp.index() +"] = ["+ yp.yamlElemArr[ yp.index() ] +"]" );
-            if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): parent Map = ["+ lowestmap.toString() +"]" );
-            lowestmap.put(  yp.yamlElemArr[ yp.index() ],  prevchildelem );
+
+            for( int ix=yp.yamlElemArr.length - 1;   ix > yp.index() ; ix-- ) {
+                // !!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!! This iterator / for-loop counts DOWN.
+                final ScalarNode keySN = new ScalarNode( Tag.STR,     yp.yamlElemArr[ix],     null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
+                final List<NodeTuple> nt = new LinkedList<NodeTuple>();
+                nt.add ( new NodeTuple( keySN, prevchildelem ) );
+                final Node newMN = new MappingNode( Tag.MAP, false,    nt,    null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
+                if ( this.verbose ) System.out.println( HDR +": added the NEW path @ "+ ix +" yp.yamlElemArr[ix]="+ yp.yamlElemArr[ix] +"  newMN= ["+ newMN +"]" );
+                prevchildelem = newMN;
+            }
+
+            // we created an ENTIRE Node-Hierarchy in the FOR loop above.
+            // Now .. Let's 'attach' it to the exiting --input YAML provided by the user
+            final String existingKeyStr = yp.yamlElemArr[ yp.index() ];
+            if ( this.verbose ) System.out.println( HDR +": Adding the final MISSING Path-elem @ ["+ yp.index() +"] = ["+ existingKeyStr +"]" );
+            if ( this.verbose ) System.out.println( HDR +": Existing lowestExistingNode, which is now the parent Map = ["+ lowestExistingNode.toString() +"]" );
+            doInsertBasedOnNodeType( lowestExistingNode, existingKeyStr, prevchildelem );
         }
 
         // java's forEach never works if you are altering anything within the Lambda body
         // this.existingPathsForInsertion.forEach( tpl -> {tpl.val.remove(tpl.key); });
-        if ( this.showStats ) System.out.println( "count="+ (this.existingPathsForInsertion.size() + deepestNewPaths2bCreated.size()) );
-        if ( this.showStats ) this.existingPathsForInsertion.forEach( tpl -> { System.out.println(tpl.key); } );
+        if ( this.showStats ) System.out.println( "count="+ deepestNewPaths2bCreated.size() );
+        if ( this.showStats ) this.newPaths2bCreated.forEach( tpl -> { System.out.println(tpl.key); } );
     }
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
+
+    private void doInsertBasedOnNodeType( final Node lowestExistingNode, final String existingKeyStr, final Node prevchildelem ) throws Exception
+    {
+        final String HDR = CLASSNAME +": doInsertBasedOnNodeType(lowestExistingNode["+ lowestExistingNode.getNodeId() +"],"+existingKeyStr+",prevchildelem) ";
+        if ( lowestExistingNode.getNodeId() == NodeId.mapping && lowestExistingNode instanceof MappingNode ) {
+            final MappingNode existingMapNode = (MappingNode) lowestExistingNode;
+            final java.util.List<NodeTuple> tuples = existingMapNode.getValue();
+            // since this is all NEW content and even NEW Parent Node-heirarchy.. we'll assume a simple 'ad()' into the tuples List<> object will work without any issues.
+            final NodeTuple kv = NodeTools.getNodeTuple( existingMapNode, existingKeyStr );
+assert( kv != null );  // if we look up the existingMapNode.. why on earth should this be null?
+            if ( kv == null ) {
+                if ( this.verbose ) System.out.println( HDR +" getNodeTuple( existingMapNode, existingKeyStr="+ existingKeyStr +" ) == null. So.. adding new NodeTuple @ that location to 'tuples'." );
+                final ScalarNode newKeySN = new ScalarNode( Tag.STR,     existingKeyStr,     null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
+                tuples.add( new NodeTuple( newKeySN,  prevchildelem) );
+            } else {
+                final Node keyN = kv.getKeyNode();
+                final ScalarNode scalarKeyN = (ScalarNode) keyN;
+                final String keyAsStr = scalarKeyN.getValue();
+                final Node valN = kv.getValueNode();
+                if ( this.verbose ) System.out.println( HDR +": lowestExistingNode already has a NodeTuple @ keyStr="+ existingKeyStr +" with RHSNode's Type="+ valN.getNodeId() +" whose RHSValue="+ valN +" " );
+                if ( valN.getNodeId() == NodeId.mapping && valN instanceof MappingNode ) {
+                    final MappingNode mapN = (MappingNode) valN;
+                    final java.util.List<NodeTuple> rhsTuples = mapN.getValue();
+                    rhsTuples.add( new NodeTuple( scalarKeyN,  prevchildelem) );
+                } else if ( valN.getNodeId() == NodeId.scalar && valN instanceof ScalarNode ) {
+                    final ScalarNode scalarValN = (ScalarNode) valN;
+                    // Since this method is common to both InsertYamlEntry.java and ReplaceYamlEntry.java (which is a subclass of InsertYamlEntry.java) .. we need to distinguish.
+                    final boolean bIsReplaceCmd = (this instanceof ReplaceYamlEntry );
+                    if ( bIsReplaceCmd || scalarValN.getValue().matches("\\s*") ) {
+                        if ( this.verbose ) System.out.println( HDR +": REPLACING the RHS for lowestExistingNode @ keyStr="+ existingKeyStr +" with RHS='"+ scalarValN.getValue() +"' " );
+                        final NodeTuple newkv = new NodeTuple( keyN, prevchildelem );
+                         // since NodeTuples are immutable.. we remove the old entry and add the new entry.
+                        final int ix = tuples.indexOf( kv ); // ix === location of existing NodeTuple within 'tuples'
+                        tuples.add( ix, newkv); // insert BEFORE the EXISTING-NodeTuple 'kv'
+                        tuples.remove( ix + 1 ); // Now remove the EXISTING-NodeTuple, which got pushes to index-location (ix+1)
+                    } else {
+                        // System.err.println( HDR +" " );
+                        throw new Exception( "The existing node @ LHS="+ keyAsStr +" has an RHS with non-empty String/Scalar value of '"+ scalarValN.getValue() +"'. For insertCommand, that is unacceptable.  RHS should be either blank/'' or an org.yaml.snakeyaml.nodes.MappingNode!  " );
+                    }
+                } else if ( valN.getNodeId() == NodeId.sequence && valN instanceof SequenceNode ) {
+                    final SequenceNode seqN = (SequenceNode) valN;
+                    final java.util.List<Node> listOfNodes = seqN.getValue();
+                    if ( this.verbose ) System.out.println( HDR +": lowestExistingNode @ keyStr="+ existingKeyStr +" is a SequenceNode ="+ seqN +" " );
+                    listOfNodes.add ( prevchildelem );
+                } else { // valN is neither MappingNode nor a ScalarNode
+                    throw new Exception( "The existing node @ LHS="+ keyAsStr +" has an RHS is of type="+ valN.getNodeId() +" and value='"+ valN +"'. For insert /Replace Command, Not sure how to handle this!  " );
+                }
+            }
+        } else {
+            throw new Exception( "Serious ERROR #3: You wanted to insert new content at "+ existingKeyStr +" .. .. but the Node at that LOCATION .. is of type ["+ lowestExistingNode.getClass().getName() +"]  with value = ["+ lowestExistingNode +"]");
+        }
+    }
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    /**
+     * @return the output as an LinkedList of objects (either Strings or Node.  This is because the 'rhs' of a YAML-line can be either of the two
+     */
+    public Node getOutput() {
+        return this.output;
+    }
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 }
