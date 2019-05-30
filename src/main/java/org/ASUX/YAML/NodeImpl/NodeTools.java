@@ -35,6 +35,7 @@ package org.ASUX.YAML.NodeImpl;
 import org.ASUX.common.Tuple;
 import org.ASUX.common.Output;
 
+import org.ASUX.yaml.JSONTools;
 import org.ASUX.yaml.YAML_Libraries;
 
 import java.util.List;
@@ -86,7 +87,7 @@ public class NodeTools {
     public static org.yaml.snakeyaml.nodes.Node  JSONString2Node( final boolean _verbose, final String  _jsonString, final DumperOptions _dumperoptions )
                     throws java.io.IOException, Exception
     {
-        final LinkedHashMap<String, Object> map = new Tools(_verbose).JSONString2Map(_jsonString);
+        final LinkedHashMap<String, Object> map = JSONTools.JSONString2Map( _verbose, _jsonString );
         if ( _verbose ) System.out.println( ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" );
         if ( _verbose ) System.out.println( "_dumperoptions = "+ _dumperoptions.getDefaultScalarStyle() +" "+ _dumperoptions.getDefaultFlowStyle() );
         if ( _verbose ) System.out.println( map );
