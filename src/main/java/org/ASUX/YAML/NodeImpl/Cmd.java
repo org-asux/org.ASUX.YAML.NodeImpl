@@ -104,37 +104,35 @@ public class Cmd {
      */
     public static void main( String[] args )
     {
+        final String HDR = CLASSNAME + ": main(String[]): ";
         CmdLineArgsBasic cmdLineArgsBasic = null;
         CmdLineArgs cmdlineargs = null;
         final java.io.StringWriter stdoutSurrogate = new java.io.StringWriter();
 
         try {
             cmdLineArgsBasic = new CmdLineArgsBasic( args );
-            if (cmdLineArgsBasic.verbose) { System.out.print( CLASSNAME + ": >>>>>>>>>>>>> "); for( String s: args) System.out.print(s);  System.out.println(); }
+            if (cmdLineArgsBasic.verbose) { System.out.print( HDR +" >>>>>>>>>>>>> "); for( String s: args) System.out.print(s);  System.out.println(); }
 
             cmdlineargs = cmdLineArgsBasic.getSpecificCmd();
-            if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(): cmdlineargs=["+ cmdlineargs +"]" );
+            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" cmdlineargs=["+ cmdlineargs +"]" );
 
             org.ASUX.YAML.NodeImpl.CmdInvoker cmdinvoker = new org.ASUX.YAML.NodeImpl.CmdInvoker( cmdlineargs.verbose, cmdlineargs.showStats );
-            if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): getting started with cmdline args = " + cmdlineargs + " " );
+            if (cmdLineArgsBasic.verbose) System.out.println( HDR +"getting started with cmdline args = " + cmdlineargs + " " );
 
             cmdinvoker.setYamlLibrary( cmdLineArgsBasic.YAMLLibrary );
-            if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): set YAML-Library to [" + cmdLineArgsBasic.YAMLLibrary + "]" );
+            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" set YAML-Library to [" + cmdLineArgsBasic.YAMLLibrary + " and [" + cmdinvoker.getYamlLibrary() + "]" );
 
-            //======================================================================
+            //=============================================================
             // read input, whether it's System.in -or- an actual input-file
-            if (cmdLineArgsBasic.verbose) System.out.println(CLASSNAME + ": about to load file: " + cmdlineargs.inputFilePath );
+            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" about to load file: " + cmdlineargs.inputFilePath );
             final java.io.InputStream is1 = ( cmdlineargs.inputFilePath.equals("-") ) ? System.in
                     : new java.io.FileInputStream(cmdlineargs.inputFilePath);
             final java.io.Reader filereader = new java.io.InputStreamReader(is1);
 
-            // final org.ASUX.common.Output.Object<?> inputObj = cmdinvoker.getYamlScanner().load( filereader );
-            final org.yaml.snakeyaml.nodes.Node inputObj = cmdinvoker.getYamlScanner().load( filereader );
-            // if ( inputObj.getType() != OutputType.Type_LinkedHashMap && inputObj.getType() != OutputType.Type_KVPairs )
-            //     throw new Exception("The input provided by '"+ cmdlineargs.inputFilePath +"' did Not return a proper YAML.  Got = "+ inputObj );
+            final Node inputNode = cmdinvoker.getYamlScanner().load( filereader );
 
-            if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): loaded data = " + inputObj + " " );
-            if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): loaded data of type [" + inputObj.getType() + "]" );
+            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" loaded data = " + inputNode + " " );
+            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" loaded data of type [" + inputNode.getType() + "]" );
 
             // -----------------------
             // PRE-YAML processing
@@ -152,8 +150,8 @@ public class Cmd {
 
             //======================================================================
             // run the command requested by user
-            final Object output = cmdinvoker.processCommand( cmdlineargs, inputObj );
-            if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): processing of entire command returned [" + (output==null?"null":output.getClass().getName()) + "]" );
+            final Object output = cmdinvoker.processCommand( cmdlineargs, inputNode );
+            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" processing of entire command returned [" + (output==null?"null":output.getClass().getName()) + "]" );
 
             //======================================================================
             final java.io.Writer javawriter = ( cmdlineargs.outputFilePath.equals("-") )
@@ -161,8 +159,9 @@ public class Cmd {
                 : new java.io.FileWriter(cmdlineargs.outputFilePath);
 
             final GenericYAMLWriter writer = cmdinvoker.getYamlWriter();
-            // writer.prepare( stdoutSurrogate, cmdlineargs.outputFilePath );
-            writer.prepare( javawriter );
+            final DumperOptions dumperopts = cmdinvoker.dumperopt;
+            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" GenericYAMLWriter writer has YAML-Library set to [" + writer.getYamlLibrary() + "]" );
+            writer.prepare( javawriter, dumperopts );
 
             //======================================================================
             // post-completion of YAML processing
@@ -179,9 +178,8 @@ public class Cmd {
                 case REPLACE:
                 case MACRO:
                 case BATCH:
-                    // if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): saving the final output " + output + "]" );
-                    if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): final output is of type " + output.getClass().getName() + "]" );
-                    writer.write( output );
+                    if (cmdLineArgsBasic.verbose) System.out.println( HDR +" final output is of type " + output.getClass().getName() + "]" );
+                    writer.write( output, dumperopts );
                     break;
             }
 
@@ -197,25 +195,16 @@ public class Cmd {
 
             // Now since we have a surrogate for STDOUT for use by , let's dump its output onto STDOUT!
             if ( cmdlineargs.outputFilePath.equals("-") ) {
-                if (cmdLineArgsBasic.verbose) System.out.println( CLASSNAME + ": main(String[]): dumpingh the final output to STDOUT" );
-                final String outputStr = stdoutSurrogate.toString();
+                if (cmdLineArgsBasic.verbose) System.out.println( HDR +" dumping the final output to STDOUT" );
+                String outputStr = stdoutSurrogate.toString();
+                // // The following IF exists, cuz the SnakeYaml library is 
+                // if ( outputStr == null || outputStr.matches("\\s*null\\s*") )
+                //     outputStr = "";
                 System.out.println( outputStr );
-                // try {
-                //     final java.io.InputStream istrm = new java.io.FileInputStream( TMP FILE );
-                //     final java.io.Reader reader6 = new java.io.StringReader( outputStr );
-                //     final java.util.Scanner scanner = new java.util.Scanner( reader6 );
+                //     final java.util.Scanner scanner = new java.util.Scanner( reader );
                 //     while (scanner.hasNextLine()) {
                 //         System.out.println( scanner.nextLine() );
                 //     }
-                // } catch (java.io.IOException e) {
-                //     e.printStackTrace(System.err);
-                //     System.err.println( CLASSNAME + ": openBatchFile(): Failure to read Command-output contents ["+ outputStr +"]" );
-                //     System.exit(102);
-                // } catch (Exception e) {
-                //     e.printStackTrace(System.err);
-                //     System.err.println( CLASSNAME + ": openBatchFile(): Unknown Internal error: re: Command-output contents ["+ outputStr +"]" );
-                //     System.exit(103);
-                // }
             }
 
         } catch (YAMLPath.YAMLPathException e) {
