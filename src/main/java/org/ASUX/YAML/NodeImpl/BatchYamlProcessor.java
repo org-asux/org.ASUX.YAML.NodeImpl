@@ -206,7 +206,6 @@ public class BatchYamlProcessor {
         final String HDR = CLASSNAME +": processBatch(recursion="+ _bInRecursion +","+ _batchCmds.getCmdType().toString() +"): ";
         Node inputNode = null;
         Node tempOutput = null; // it's immediately re-initialized within WHILE-Loop below.
-        final org.ASUX.yaml.Tools tools = this.memoryAndContext.getContext().getTools();
 
         if ( this.verbose ) System.out.println( HDR +" @ BEGINNING recursion="+ _bInRecursion +" & _input="+ ((_input!=null)?_input.toString():"null") +"]" );
         final Properties globalVariables = this.AllProps.get( BatchFileGrammer.GLOBALVARIABLES );
@@ -689,7 +688,6 @@ public class BatchYamlProcessor {
 
             if ( AWSCmdType.awssdk == null )
                 AWSCmdType.awssdk = AWSSDK.AWSCmdline( _verbose );
-            // final org.ASUX.YAML.NodeImpl.Tools tools9 = new org.ASUX.YAML.NodeImpl.Tools(_verbose);
 
             // skip the 1st word (in this.cmdLineArgsStrArr)  which is fixed at 'AWS.SDK'
             final String awscmdStr = this.cmdLineArgsStrArr[1];
