@@ -65,13 +65,10 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     public static final String CLASSNAME = InsertYamlEntry.class.getName();
 
     // Note: We need to remove the "old" - exactly as DeleteYamlEntry.java does.  Then we insert new value.
-    protected final ArrayList< Tuple<Object, Node> >
-                    existingPathsForInsertion = new ArrayList<>();
-    protected final ArrayList< Tuple< YAMLPath, Node> >
-                    newPaths2bCreated = new ArrayList<>();
+    protected final ArrayList< Tuple<Object, Node> > existingPathsForInsertion = new ArrayList<>();
+    protected final ArrayList< Tuple< YAMLPath, Node> > newPaths2bCreated = new ArrayList<>();
 
     protected final Object newData2bInserted;
-    protected final Node newNode2bInserted;
 
     protected Node output;
 
@@ -95,7 +92,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
             throw new Exception( HDR +"_nob parameter is Null" );
 
         this.newData2bInserted = _nob;
-        this.newNode2bInserted = validateNewContent( _nob );
+        if ( this.verbose ) System.out.println(HDR + " _nob="+ _nob );
 
         assert( _nob instanceof String || _nob instanceof Node );
     } // function
@@ -184,28 +181,49 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     /** See details and warnings in {@link AbstractYamlEntryProcessor#atEndOfInput}
      * You can fuck with the contents of any of the parameters passed, to your heart's content.
      */
-    // *  @param _TopmostNode the topmost Node in the input YAML
+    // *  @param _topmostNode the topmost Node in the input YAML
     // *  @throws Exception like ClassNotFoundException while trying to serialize and deserialize the input-parameter
-    protected void atEndOfInput( final Node _TopmostNode, final YAMLPath _yamlPath ) throws Exception
+    protected void atEndOfInput( final Node _topmostNode, final YAMLPath _yamlPath ) throws Exception
     {
         final String HDR = CLASSNAME + ": atEndOfInput(): ";
 
-        this.output = (Node) _TopmostNode; // this should handle all scenarios - except when '/' is the YAML path.
+        this.output = _topmostNode; // this should handle all scenarios - except when '/' is the YAML path.
 
+        final Node newNode2bInserted = validateNewContent( this.newData2bInserted );
         if ( YAMLPath.ROOTLEVEL.equals( _yamlPath.getRaw() ) ) // '/' is exactly the entire YAML-Path pattern provided by the user on the cmd line
         {
-            if ( this.newNode2bInserted instanceof MappingNode ) {
-                this.output = (MappingNode) this.newData2bInserted;
-            } else if ( this.newNode2bInserted instanceof SequenceNode ) {
-                this.output = (SequenceNode) this.newData2bInserted;
-            } else if ( this.newNode2bInserted instanceof Node ) {
-                this.output = (Node) this.newData2bInserted;
+                if ( _topmostNode instanceof MappingNode && _topmostNode.getNodeId() == NodeId.mapping ) {
+                final MappingNode topmostMapN = (MappingNode) _topmostNode;
+                final java.util.List<NodeTuple> topmostTuples = topmostMapN.getValue();
+                if ( newNode2bInserted instanceof MappingNode ) {
+                    final MappingNode newMapN = (MappingNode) this.newData2bInserted;
+                    final java.util.List<NodeTuple> newTuples = newMapN.getValue();
+                    topmostTuples.addAll( newTuples );
+                } else {
+                    throw new Exception( "Invalid combination of new content and --input.  You provided new-content for "+ YAMLPath.ROOTLEVEL +" .. .. but provided new-content is NOT a proper 'Map' YAML. Instead new-content is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted.toString() +"]");
+                }
+            } else if ( _topmostNode instanceof SequenceNode && _topmostNode.getNodeId() == NodeId.sequence ) {
+                final SequenceNode seqN = (SequenceNode) _topmostNode;
+                final java.util.List<Node> seqs = seqN.getValue();
+                seqs.add( newNode2bInserted );
+            } else if ( _topmostNode instanceof ScalarNode && _topmostNode.getNodeId() == NodeId.scalar ) {
+                final ScalarNode scaN = (ScalarNode) _topmostNode;
+                throw new Exception( "Invalid use of '/' for YAML-Path-RegExp. You provided new content for "+ YAMLPath.ROOTLEVEL +" .. .. but the YAML provided via --input cmdlime optiom is a SIMPLE SCALAR Node containing the string-value ["+ scaN.getValue() +"]  .. full Node details = ["+ scaN +"]");
+            } else {
+                throw new Exception( HDR +": Serious ERROR B: You provided new content for "+ YAMLPath.ROOTLEVEL +" .. .. but the YAML provided via --input cmdlime optiom is is of __UNKNOWN__ type ["+ _topmostNode.getClass().getName() +"]  with value = ["+ _topmostNode +"]");
+            }
+            // if ( newNode2bInserted instanceof MappingNode ) {
+            //     this.output = (MappingNode) this.newData2bInserted;
+            // } else if ( newNode2bInserted instanceof SequenceNode ) {
+            //     this.output = (SequenceNode) this.newData2bInserted;
+            // } else if ( newNode2bInserted instanceof Node ) {
+            //     this.output = (Node) this.newData2bInserted;
             // } else if ( this.newData2bInserted instanceof String ) {
             //     final ScalarNode newnode = new ScalarNode( Tag.STR, this.newData2bInserted.toString(), null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
             //     this.output = newnode; // !!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!! this.output is Not set to the 'default' == whatever was provided as input YAML for INSERT-Cmd
-            } else {
-                throw new Exception( HDR +": Serious ERROR: You wanted to insert new content at / .. .. but provided content that is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted.toString() +"]");
-            }
+            // } else {
+            //     throw new Exception( HDR +": Serious ERROR: You wanted to insert new content at / .. .. but provided content that is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted.toString() +"]");
+            // }
             return; // !!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!! This function returns here.
         }
         // !!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!!
@@ -242,8 +260,8 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                     if ( keyAsStr.equals(key2Search) ) {
                         bFound = true;
                         // Now put in a new entry - with the replacement data!  This is because NodeTuple is immutable, so it needs to be replaced (within tuples) with a new instance.
-                        // newTuple = new NodeTuple( keyN, NodeTools.deepClone( this.newNode2bInserted ) );
-                        doInsertBasedOnNodeType( mapN, key2Search, NodeTools.deepClone( this.newNode2bInserted ) ); // This command will CHANGE the 'tuples' iterator used for the INNER FOR LOOP!!!!!
+                        // newTuple = new NodeTuple( keyN, NodeTools.deepClone( newNode2bInserted ) );
+                        doInsertBasedOnNodeType( mapN, key2Search, NodeTools.deepClone( newNode2bInserted ) ); // This command will CHANGE the 'tuples' iterator used for the INNER FOR LOOP!!!!!
                         // If there are multiple matches.. then without deepclone, the YAML implementation libraries (like Eso teric Soft ware)
                         // library, will use "&1" to define your 1st copy (in output) and put "*1" in
                         // all other locations this replacement text WAS SUPPOSED have been :-(
@@ -261,7 +279,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
 
                 final SequenceNode seqN = (SequenceNode) tpl.val;
                 final java.util.List<Node> seqs = seqN.getValue();
-                seqs.add( ix.intValue(), this.newNode2bInserted );
+                seqs.add( ix.intValue(), newNode2bInserted );
 
             } else {
                 throw new Exception( CLASSNAME +": atEndOfInput(): UNEXPECTED Node/Tpl2["+ tpl.key.getClass().getName() +"]="+ tpl.key +" and the Key/Ref/Tpl1["+ tpl.val.getClass().getName() +"]= "+ tpl.val +" " );
