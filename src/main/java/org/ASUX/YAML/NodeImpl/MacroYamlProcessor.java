@@ -67,7 +67,7 @@ import org.yaml.snakeyaml.serializer.Serializer;
  */
 public class MacroYamlProcessor {
 
-    public static final String CLASSNAME = "org.ASUX.yaml.MacroYamlProcessor";
+    public static final String CLASSNAME = MacroYamlProcessor.class.getName();
 
     /** <p>Whether you want deluge of debug-output onto System.out.</p><p>Set this via the constructor.</p>
      *  <p>It's read-only (final data-attribute).</p>
@@ -137,8 +137,8 @@ public class MacroYamlProcessor {
                 final Node key = kv.getKeyNode();
                 assert ( key.getNodeId() == NodeId.scalar ); // if assert fails, what scenario does that represent?
                 final ScalarNode scalarKey = (ScalarNode) key;
-                final String keytag = scalarKey.getTag().getValue();
-                if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): found LHS keyTag : RHS = ["+ key + "] !"+ keytag + " : "+ kv.getValueNode() + " ;" );
+                final String keytag = scalarKey.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
+                if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): found LHS, keyTag & RHS = ["+ key + "] !"+ keytag + " : "+ kv.getValueNode() + " ;" );
 
 				final String keyNM = org.ASUX.yaml.Macros.eval( scalarKey.getValue(), _props );
 				final String keytagNM = org.ASUX.yaml.Macros.eval( keytag, _props );
@@ -151,7 +151,7 @@ public class MacroYamlProcessor {
                 if ( valNode.getNodeId() == NodeId.scalar) {
                     final ScalarNode scalarVal = (ScalarNode) valNode;
 					final String valNM = org.ASUX.yaml.Macros.eval( scalarVal.getValue(), _props );
-					final String valtag = scalarVal.getTag().getValue();
+					final String valtag = scalarVal.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
 					final String valtagNM = org.ASUX.yaml.Macros.eval( valtag, _props );
 					final ScalarNode newvalnode = new ScalarNode( new Tag(valtagNM), valNM, scalarVal.getStartMark(), scalarVal.getEndMark(), scalarVal.getScalarStyle() );
 					// ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
@@ -169,7 +169,7 @@ public class MacroYamlProcessor {
             } // for
 			final MappingNode newmap = new MappingNode(  mapNode.getTag(), false, newtuples, mapNode.getStartMark(), mapNode.getEndMark(), mapNode.getFlowStyle() ) ;
             // MappingNode(Tag ignore, boolean resolved, List<NodeTuple> value, Mark startMark, Mark endMark, DumperOptions.FlowStyle flowStyle)
-            if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): function-returning a NEW MappingNODE with Tag = ["+ newmap.getTag() + "] replicating "+ _input.getTag() +" ;" );
+            if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): function-returning a NEW MappingNODE with Tag="+ newmap.getTag() + " replicating-Tag="+ _input.getTag() +" = "+ newmap +" " );
             return newmap;
 
         } else if ( _input instanceof SequenceNode ) {
@@ -183,7 +183,7 @@ public class MacroYamlProcessor {
                 if ( valNode.getNodeId() == NodeId.scalar) {
                     final ScalarNode scalarVal = (ScalarNode) valNode;
 					final String valNM = org.ASUX.yaml.Macros.eval( scalarVal.getValue(), _props );
-					final String valtag = scalarVal.getTag().getValue();
+					final String valtag = scalarVal.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
 					final String valtagNM = org.ASUX.yaml.Macros.eval( valtag, _props );
 					final ScalarNode newvalnode = new ScalarNode( new Tag(valtagNM), valNM, scalarVal.getStartMark(), scalarVal.getEndMark(), scalarVal.getScalarStyle() );
 					// ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
@@ -199,14 +199,14 @@ public class MacroYamlProcessor {
             } // for
 			final SequenceNode newseqNode = new SequenceNode(  seqNode.getTag(), false, newseqs, seqNode.getStartMark(), seqNode.getEndMark(), seqNode.getFlowStyle() ) ;
             // SequenceNode(Tag tag, boolean resolved, List<Node> value, Mark startMark, Mark endMark, DumperOptions.FlowStyle flowStyle)
-            if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): function-returning a NEW SequenceNODE with Tag = ["+ newseqNode.getTag() + "] replicating "+ _input.getTag() +" ;" );
+            if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): function-returning a NEW SequenceNODE with Tag="+ newseqNode.getTag() + " replicating-Tag="+ _input.getTag() +" = "+ newseqNode +" " );
             return newseqNode;
 
         } else if ( _input instanceof ScalarNode ) {
             // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/nodes/ScalarNode.java
             final ScalarNode scalarVal = (ScalarNode) _input;
             final String valNM = org.ASUX.yaml.Macros.eval( scalarVal.getValue(), _props );
-            final String valtag = scalarVal.getTag().getValue();
+            final String valtag = scalarVal.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
             final String valtagNM = org.ASUX.yaml.Macros.eval( valtag, _props );
             final ScalarNode newvalnode = new ScalarNode( new Tag(valtagNM), valNM, scalarVal.getStartMark(), scalarVal.getEndMark(), scalarVal.getScalarStyle() );
             // ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
