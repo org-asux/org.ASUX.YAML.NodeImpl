@@ -130,7 +130,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
      *  @param _showStats Whether you want a final summary onto console / System.out
      */
     public CmdInvoker( final boolean _verbose, final boolean _showStats ) {
-        this( _verbose, _showStats, null, new Tools(_verbose ) );
+        this( _verbose, _showStats, null );
     }
 
     /**
@@ -138,10 +138,9 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
      *  @param _verbose Whether you want deluge of debug-output onto System.out.
      *  @param _showStats Whether you want a final summary onto console / System.out
      *  @param _memoryAndContext pass in memory from another previously existing instance of this class.  Useful within {@link BatchYamlProcessor} which creates new instances of this class, whenever it encounters a YAML or AWS command within the Batch-file.
-     *  @param _tools reference to an instance of org.ASUX.yaml.Tools class or it's subclasses org.ASUX.yaml.CollectionsImpl.Tools or org.ASUX.YAML.NodeImpl.Tools
      */
-    public CmdInvoker( final boolean _verbose, final boolean _showStats, final MemoryAndContext _memoryAndContext, final org.ASUX.yaml.Tools _tools ) {
-        super(_verbose, _showStats, _memoryAndContext, _tools );
+    public CmdInvoker( final boolean _verbose, final boolean _showStats, final MemoryAndContext _memoryAndContext ) {
+        super(_verbose, _showStats, _memoryAndContext );
         init();
     }
 
@@ -270,9 +269,6 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             if (claIns.verbose) System.out.println( HDR +" claIns.yamlRegExpStr="+ claIns.yamlRegExpStr +" & loading @Insert-file: " + claIns.insertFilePath);
             final Object newContent = this.getDataFromReference( claIns.insertFilePath );
             if (claIns.verbose) System.out.println( HDR +" about to start INSERT command using: [" + newContent.toString() + "]");
-            // Within a Batch-YAML context, the output of the previous line does NOT have to be YAML.
-            // In such a case, an ArrayList or LinkedList object is converted into one -- by Tools.wrapAnObject().
-            // So, we will use the inverse-function Tools.getTheActualObject() to undo that.
             InsertYamlEntry inscmd = new InsertYamlEntry( claIns.verbose, claIns.showStats, dumperopt, newContent );
             inscmd.searchYamlForPattern( _inputNode, claIns.yamlRegExpStr, claIns.yamlPatternDelimiter );
             final Node output3 = inscmd.getOutput();
@@ -340,7 +336,6 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
         final String HDR = CLASSNAME +" getDataFromReference("+ _src +"): ";
         if ( _src == null || _src.trim().length() <= 0 )
             return null;
-        final org.ASUX.yaml.Tools  tools = this.getTools();
 
         if ( _src.startsWith("@") ) {
             final String srcFile = _src.substring(1);
@@ -425,54 +420,54 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
     public void saveDataIntoReference( final String _dest, final Object _input )
                 throws FileNotFoundException, IOException, Exception
     {
-        final org.ASUX.yaml.Tools tools = (org.ASUX.yaml.Tools) this.getTools();
-
-        if ( _dest != null ) {
-            if ( _dest.startsWith("@") ) {
-                if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detected a JSON-file provided via '@'." );
-                final String destFile = _dest.substring(1);  // remove '@' as the 1st character in the file-name provided
-                if ( destFile.endsWith(".json") ) {
-                    // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
-                    final com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                    // final InputStream fs = new FileInputStream( destFile );
-                    final java.io.FileWriter filewr = new java.io.FileWriter( destFile );
-                    @SuppressWarnings("unchecked")
-                    final Node topNode = (Node) _input;
-                    final org.ASUX.common.Output.Object<?> inputObj = NodeTools.Node2Map( this.verbose, topNode ); // Can't use SnakeYaml Nodes.
-                    assert( inputObj.getMap() != null );
-                    objMapper.writeValue( filewr, inputObj.getMap() ); // objMapper only takes a Collection as input, and CANNOT process SnakeYAML Nodes.
-                    filewr.close();
-                    // fs.close();
-                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): JSON written was =" + _input );
-                    return;
-                } else if ( destFile.endsWith(".yaml") ) {
-                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detected a YAML-file provided via '@'." );
-                    final GenericYAMLWriter yamlwriter = this.getYamlWriter();
-                    final java.io.FileWriter filewr = new java.io.FileWriter( destFile );
-                    yamlwriter.prepare( filewr, this.dumperopt );
-                    yamlwriter.write( _input, this.dumperopt );
-                    yamlwriter.close();
-                    filewr.close();
-                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): YAML written was =" + _input );
-                    return;
-                } else {
-                    if ( this.verbose ) System.out.println( CLASSNAME +" saveDataIntoReference("+ _dest +"): detecting NEITHER a JSON NOR A YAML file provided via '@'." );
-                    throw new Exception("The saveTo @____ is NEITHER a YAML nor JSON file-name-extension.  Based on file-name-extension, the output is saved appropriately. ");
-                }
-            } else {
-                // Unlike load/read (as done in getDataFromReference()..) whether or not the user uses a !-prefix.. same action taken.
-                if ( this.verbose ) System.out.println( CLASSNAME +" getDataFromReference("+ _dest +"): detecting Save-To-memory via '!' (if '!' is not specified, it's implied)." );
-                final String saveToMapName = _dest.startsWith("!") ?  _dest.substring(1) : _dest;
-                if ( this.memoryAndContext != null ) {
-                    // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
-                    this.memoryAndContext.saveDataIntoMemory( saveToMapName, _input );  // remove '!' as the 1st character in the destination-reference provided
-                    if (this.verbose) System.out.println( CLASSNAME +": saveDataIntoReference("+ _dest +"): saved into 'memoryAndContext'=" + _input );
-                }
-            }
-        } else {
+        final String HDR = CLASSNAME +" saveDataIntoReference("+ _dest +" , _input): ";
+        if ( _dest == null ) {
+            System.err.println( HDR +" parameter _dest is Null. Must be INVALID Code invoking this method." );
             return; // do Nothing.
         }
-    }
+
+        if ( _dest.startsWith("@") ) {
+            if ( this.verbose ) System.out.println( HDR +" saveDataIntoReference("+ _dest +"): detected a JSON-file provided via '@'." );
+            final String destFile = _dest.substring(1);  // remove '@' as the 1st character in the file-name provided
+            if ( destFile.endsWith(".json") ) {
+                // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
+                final com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                // final InputStream fs = new FileInputStream( destFile );
+                final java.io.FileWriter filewr = new java.io.FileWriter( destFile );
+                @SuppressWarnings("unchecked")
+                final Node topNode = (Node) _input;
+                final org.ASUX.common.Output.Object<?> inputObj = NodeTools.Node2Map( this.verbose, topNode ); // Can't use SnakeYaml Nodes.
+                assert( inputObj.getMap() != null );
+                objMapper.writeValue( filewr, inputObj.getMap() ); // objMapper only takes a Collection as input, and CANNOT process SnakeYAML Nodes.
+                filewr.close();
+                // fs.close();
+                if ( this.verbose ) System.out.println( HDR +" JSON written was =" + _input );
+                return;
+            } else if ( destFile.endsWith(".yaml") ) {
+                if ( this.verbose ) System.out.println( HDR +" detected a YAML-file provided via '@'." );
+                final GenericYAMLWriter yamlwriter = this.getYamlWriter();
+                final java.io.FileWriter filewr = new java.io.FileWriter( destFile );
+                yamlwriter.prepare( filewr, this.dumperopt );
+                yamlwriter.write( _input, this.dumperopt );
+                yamlwriter.close();
+                filewr.close();
+                if ( this.verbose ) System.out.println( HDR +" YAML written was =" + _input );
+                return;
+            } else {
+                if ( this.verbose ) System.out.println( HDR +" detecting NEITHER a JSON NOR A YAML file provided via '@'." );
+                throw new Exception("The saveTo @____ is NEITHER a YAML nor JSON file-name-extension.  Based on file-name-extension, the output is saved appropriately. ");
+            }
+        } else {
+            // Unlike load/read (as done in getDataFromReference()..) whether or not the user uses a !-prefix.. same action taken.
+            if ( this.verbose ) System.out.println( HDR +" detecting Save-To-memory via '!' (if '!' is not specified, it's implied)." );
+            final String saveToMapName = _dest.startsWith("!") ?  _dest.substring(1) : _dest;
+            if ( this.memoryAndContext != null ) {
+                // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
+                this.memoryAndContext.saveDataIntoMemory( saveToMapName, _input );  // remove '!' as the 1st character in the destination-reference provided
+                if (this.verbose) System.out.println( HDR +" saved into 'memoryAndContext'=" + _input );
+            }
+        } // outer if-else
+    } // method
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
