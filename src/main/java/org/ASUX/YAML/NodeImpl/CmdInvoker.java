@@ -237,10 +237,6 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             case PLAIN:         dumperopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.PLAIN );          break;
             default:            dumperopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
         }
-// System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 Enums.ScalarStyle="+ org.ASUX.yaml.Enums.ScalarStyle.list(" / ") );
-// System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 this.dumperoptions.getDefaultScalarStyle()="+ dumperopt.getDefaultScalarStyle() );
-// System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 this.dumperoptions.getDefaultScalarStyle().getChar()="+ dumperopt.getDefaultScalarStyle().getChar() );
-// System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 2 this.dumperoptions.getDefaultFlowStyle()="+ dumperopt.getDefaultFlowStyle() );
 
         switch ( _cmdLineArgs.cmdType ) {
         case READ:
@@ -266,7 +262,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             if (claTbl.verbose) System.out.println( HDR +" claTbl.yamlRegExpStr="+ claTbl.yamlRegExpStr +" & tableColumns=[" + claTbl.tableColumns +"]" );
             TableYamlQuery tblcmd = new TableYamlQuery( claTbl.verbose, claTbl.showStats, dumperopt, claTbl.tableColumns, claTbl.yamlPatternDelimiter );
             tblcmd.searchYamlForPattern( _inputNode, claTbl.yamlRegExpStr, claTbl.yamlPatternDelimiter );
-            final Node output = null; tblcmd.getOutput();
+            final Node output = tblcmd.getOutput();
             return output;
 
         case INSERT:
