@@ -150,7 +150,6 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     protected boolean onEnd2EndMatch( final YAMLPath _yamlPath, final Object _key, final Node _keyNode, final Node _valNode, final Node _parentNode, final LinkedList<String> _end2EndPaths ) throws Exception
     {
         final String HDR = CLASSNAME +": onEnd2EndMatch(): ";
-        this.count ++;
         if ( this.verbose ) {
             System.out.print( CLASSNAME +": onEnd2EndMatch(): _end2EndPaths =");
             _end2EndPaths.forEach( s -> System.out.print(s+_yamlPath.delimiter) );
@@ -207,6 +206,9 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
                         throw new TableCmdException( _errmsg + "].  At that location canNOT find column # "+ ix +" '"+ col +"' provided to Table-query Command." );
                 } // outer for loop
 
+                // if we are here, ALL the 'columns' of the tabular-output were found (if not, an exception is thrown)
+                count ++;
+
                 // this.output wont work within this inline-class
                 output.add( tablerow ); // could be a string or a java.util.LinkedHashMap&lt;String, Object&gt;
 
@@ -262,6 +264,11 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
         if ( this.showStats ) System.out.println("Total=" + this.count );
 
         if ( this.verbose ) {
+            // for( ArrayList<String> arr: this.output ) {
+            //     arr.forEach( s -> System.out.print(s+"\t") );
+            //     System.out.println();
+            // } // for
+            // The above commented code will produce same output as the following for-loop - ONLY if Scalar 2D-array output.  In case the 'cells' in the 'table' are NOT ScalarNodes, the code below does a far better job of producing human-readable debugging-output.
             final java.util.List<Node> seqs = this.outputAsNode.getValue();
             for ( int ix=0;  ix < seqs.size(); ix ++ ) {
                 final Node seqItemNode = seqs.get(ix); 
@@ -272,7 +279,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
                     final String s = NodeTools.Node2YAMLString(seqItemNode);
                     System.out.println( s );
                 }
-            }
+            } // for loop
             System.out.println();
         } // if
     }
