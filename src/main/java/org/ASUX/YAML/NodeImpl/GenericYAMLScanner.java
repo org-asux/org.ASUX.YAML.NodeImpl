@@ -52,14 +52,14 @@ import static org.junit.Assert.*;
 
 // https://yaml.org/spec/1.2/spec.html#id2762107
 import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.composer.Composer;
+import org.yaml.snakeyaml.composer.Composer; // needed within this class
 import org.yaml.snakeyaml.nodes.NodeTuple;
 import org.yaml.snakeyaml.nodes.NodeId;
 import org.yaml.snakeyaml.nodes.Node;
 import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.MappingNode;
 import org.yaml.snakeyaml.nodes.SequenceNode;
-import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/error/Mark.java
 import org.yaml.snakeyaml.DumperOptions;
 
@@ -106,6 +106,26 @@ public class GenericYAMLScanner {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=================================================================================
 
+/*
+    USEast1: !Equals
+    <NodeTuple keyNode=<org.yaml.snakeyaml.nodes.ScalarNode (tag=tag:yaml.org,2002:str, value=USEast1)>; valueNode=<org.yaml.snakeyaml.nodes.SequenceNode (tag=!Equals, value= [ an array of what is in 2 lines below ]
+        - !Ref 'AWS::Region'
+        <org.yaml.snakeyaml.nodes.ScalarNode (tag=!Ref, value=AWS::Region)>
+        - us-east-1
+        <org.yaml.snakeyaml.nodes.ScalarNode (tag=tag:yaml.org,2002:str, value=us-east-1)>
+        - !Condition ${ASUX::USEast1}
+        <org.yaml.snakeyaml.nodes.ScalarNode (tag=!Condition, value=${ASUX::USEast1})>
+        - !Condition USEast2
+        <org.yaml.snakeyaml.nodes.ScalarNode (tag=!Condition, value=USEast2)>
+
+Per the SnakeYAML Reference implementation: The '!___' assumes only ALPHANUMERICs _ - after the BANG/exclamation.  Pretty-Much a rigid JAVA CLASSNAME naming-convention-requirement.
+See ALPHA_S inside https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/scanner/Constant.java
+
+*/
+
+
+
+
     /**
      * This method will use the YAML-Library specified via {@link #setYamlLibrary} and load the YAML content (pointed to by the _inreader paramater).
      * @param _inreader either a StringReader or a FileReader
@@ -114,7 +134,6 @@ public class GenericYAMLScanner {
      */
     public Node load( final java.io.Reader _inreader ) throws Exception
     {
-        Node outputObj = null;
         if (this.verbose) System.out.println( CLASSNAME + ": load(java.io.Reader): this.getYamlLibrary()="+ this.getYamlLibrary() );
 
         // -----------------------
@@ -125,76 +144,34 @@ public class GenericYAMLScanner {
                 // https://yaml.org/spec/1.2/spec.html#id2762107
                 // per https://bitbucket.org/asomov/snakeyaml/src/tip/src/test/java/examples/CustomMapExampleTest.java
                 // See also https://bitbucket.org/asomov/snakeyaml/wiki/Documentation#markdown-header-collections
-                // class MyCustomConstructor extends org.yaml.snakeyaml.constructor.Constructor {
-                //     @Override
-                //     protected Ma p<Object, Object> createDefaultMap(int initSize) {
-                //         final Ma p<Object, Object> retval = (Ma p<Object, Object>) new LinkedHashMap<Object, Object>();
-                //         return retval;
-                //     }
-                //     // @Override
-                //     // protected Class<?> getClassForNode(Node node) {
-                //     //     Class<? extends Object> classForTag = typeTags.get(node.getTag());
-                //     //     if (classForTag == null) {
-                //     //         Class<?> cl;
-                //     //         try {
-                //     //             String name = node.getTag().getClassName();
-                //     //             cl = getClassForName(name);
-                //     //         } catch (ClassNotFoundException e) {
-                //     //             // This is where we override the PARENT class's definition of this function/method.
-                //     //             // throw new YAMLException("Class not found: " + name);
-                //     //             cl = String.class;
-                //     //         } catch (org.yaml.snakeyaml.error.YAMLException e) {
-                //     //             cl = String.class;
-                //     //         }
-                //     //         typeTags.put(node.getTag(), cl);
-                //     //         return cl;
-                //     //     } else {
-                //     //         return classForTag;
-                //     //     }
-                //     // }
-                // }; // inline class definition
-                // Yaml yaml = new Yaml( new MyCustomConstructor() ); // see class-definition for MyCustomConstructor in above few lines
-                // // Yaml.load() accepts a String or an InputStream object
-                // // List<Object> list = (List<Object>) yaml.load( is1 );
-                // @SuppressWarnings("unchecked")
-                // final LinkedHashMap<String, Object> lhm22 = (LinkedHashMap<String, Object>) yaml.load( is1 );
-                final org.yaml.snakeyaml.reader.StreamReader snkrdr = new org.yaml.snakeyaml.reader.StreamReader(_inreader);
-                final Composer composer = new Composer( new org.yaml.snakeyaml.parser.ParserImpl(snkrdr), new org.yaml.snakeyaml.resolver.Resolver() );
+                final org.yaml.snakeyaml.reader.StreamReader snkrdr = new org.yaml.snakeyaml.reader.StreamReader( _inreader );
+                final Composer composer = new Composer( new org.yaml.snakeyaml.parser.ParserImpl(snkrdr), new org.yaml.snakeyaml.resolver.Resolver() ); // last/2nd CANNOT be null.  Resolver.class instance is required.
+
                 // final Node rootNode = composer.getSingleNode();
-// {
-//     System.out.println( ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" );
-//     final Composer composer2 = new Composer( new org.yaml.snakeyaml.parser.ParserImpl(snkrdr), new org.yaml.snakeyaml.resolver.Resolver() );
-//     composer2.checkNode();
-//     final java.io.StringWriter stdoutSurrogate = new java.io.StringWriter();
-//     final GenericYAMLWriter snakewr = new GenericYAMLWriter( this.verbose );
-//     snakewr.test( stdoutSurrogate, composer2.getNode() );
-//     snakewr.close();
-//     stdoutSurrogate.close();
-//     final String outputStr = stdoutSurrogate.toString();
-//     System.out.println(outputStr);
-//     System.out.println( ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" );
-// }
 
                 int numOfYamlDocuments = 0;
                 final ArrayList<Node> docuArray = new ArrayList<Node>();
+                Node outputObj = null;
 
                 // This while loop .. is about loading MULTIPLE (>= 1) YAML-documents -- separated by a '--'
                 while ( composer.checkNode() ) { // Check if further documents are available.
                     // getNode(): Reads and composes the next document.
                     final Node n = composer.getNode(); // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/nodes/Node.java
                     if ( this.verbose ) System.out.println( CLASSNAME +" load(): document # "+ numOfYamlDocuments + " is of type "+ n.getNodeId() +" " );
+                    if ( this.verbose ) System.out.println( NodeTools.Node2YAMLString( n )  ) ;
 
-                    outputObj = n; // Tools.recursiveConversion( n );
+                    outputObj = n;
 
                     numOfYamlDocuments ++;
                     docuArray.add( outputObj );
                 } // while
 
-                if ( numOfYamlDocuments == 1 ) {
+                if ( numOfYamlDocuments <= 0 ) {
+                    return new ScalarNode( Tag.NULL, "null", null, null, DumperOptions.ScalarStyle.PLAIN ); // This should be representing an empty YAML.  I hope!
+                } else if ( numOfYamlDocuments == 1 ) {
                     return outputObj;
-                    // inputData.values().iterator().next(); // if this throws exception.. I've no idea what's going on.
                 } else {
-                    return docuArray.get(0);
+                    throw new Exception( CLASSNAME +" load(): we have "+ numOfYamlDocuments + " documents within a single YAML file.  org.ASUX.YAML libraries are currently not sophisticated to handle multiple YAML in a single file." );
                 }
                 // break;
 
@@ -214,13 +191,4 @@ public class GenericYAMLScanner {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
-    /**
-     * Generates an empty YAML, which when output as JSON gives '{}', and as YAML gives you an empty file/string.
-     */
-    public Node getEmptyYAML() throws Exception {
-        throw new Exception( CLASSNAME +".getEmptyYAML(): This method is NOT yet implemented! " );
-        // new Mark( "startMark", 1, 1, 1, "String buffer", 1)
-        // new Mark( "endMark",   1, 1, 1, "String buffer", 2)
-        // new MappingNode( Tag.MAP, false, new List<NodeTuple>(), Mark startMark, Mark endMark, DumperOptions.FlowStyle.BLOCK ) ;
-    }
 }

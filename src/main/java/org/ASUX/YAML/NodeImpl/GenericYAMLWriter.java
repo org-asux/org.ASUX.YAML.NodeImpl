@@ -83,7 +83,7 @@ public class GenericYAMLWriter {
 
     // https://yaml.org/spec/1.2/spec.html#id2762107
     protected org.yaml.snakeyaml.Yaml snakeYaml;
-    protected java.io.Writer snakeYamlWriter;
+    protected java.io.Writer javaWriter;
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -131,11 +131,11 @@ public class GenericYAMLWriter {
 
     /**
      *  This method takes the java.io.Writer (whether StringWriter or FileWriter) and prepares the YAML library to write to it.
-     *  WARNING!!! The EsotericSoftware's com.esotericsoftware.yamlbeans.YamlWriter implementation takes over stdout, and it will STOP working for all System.out.println();
      *  @param _javawriter StringWriter or FileWriter (cannot be null)
+     *  @param _dumperoptions important to pass in a non-null object, in case you'll EVER save this new MappingNode into a file (or dump it to Stdout)
      *  @throws Exception if the YAML libraries have any issues with ERRORs inthe YAML or other issues.
      */
-    public void prepare( final java.io.Writer _javawriter ) throws Exception
+    public void prepare( final java.io.Writer _javawriter, final DumperOptions _dumperoptions ) throws Exception
     {
         // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
         switch ( this.getYamlLibrary() ) {
@@ -143,36 +143,8 @@ public class GenericYAMLWriter {
             case SNAKEYAML_Library:
                 // https://yaml.org/spec/1.2/spec.html#id2762107
                 // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
-                this.snakeYaml = new org.yaml.snakeyaml.Yaml( this.defaultConfigurationForSnakeYamlWriter() );
-                this.snakeYamlWriter = _javawriter;
-
-                // //-------------------------------------------------
-                // Serializer serializer = new Serializer(new Emitter(output, dumperOptions), resolver, dumperOptions, rootTag);
-                // try {
-                //     serializer.open();
-                //     serializer.serialize(node);
-                //     // while (data.hasNext()) {
-                //     //    Node node = representer.represent(data.next());
-                //     //    serializer.serialize(node);
-                //     // }
-                //     serializer.close();
-                // } catch (IOException e) {
-                //     throw new YAMLException(e);
-                // }
-                // //-------------------------------------------------
-                // org.yaml.snakeyaml.emitter.Emitter emitter = new org.yaml.snakeyaml.emitter.Emitter( _javawriter
-                //                , new org.yaml.snakeyaml.DumperOptions() );
-                // try {
-                //     for ( org.yaml.snakeyaml.events.Event event : document) {
-                //         emitter.emit(event);
-                //     }
-                //     fail("Loading must fail for " + files[i].getAbsolutePath());
-                //     // System.err.println("Loading must fail for " +
-                //     // files[i].getAbsolutePath());
-                // } catch( org.yaml.snakeyaml.error.YAMLException e ) {
-                // } catch (Exception e) {
-                //     assertTrue(true);
-                // }
+                this.snakeYaml = new org.yaml.snakeyaml.Yaml( _dumperoptions ); // GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter()
+                this.javaWriter = _javawriter;
                 break;
 
             case CollectionsImpl_Library:
@@ -186,32 +158,20 @@ public class GenericYAMLWriter {
         } // switch
     } //function
 
-    //-------------------------------------------------
+    //=================================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=================================================================================
+
     /**
-     * Used by GenericYAMLScanner.java - within the load() for testing purposes ( to better understand the internals of a Node-heirarchy)
-     * @param _javawriter
-     * @param _output
-     * @throws Exception
+     * Write the YAML content (_output parameter) using the YAML-Library specified via {@link #setYamlLibrary} and to the java.io.Writer reference provided via {@link #prepare(java.io.Writer)}.
+     * @param _output the content you want written out as a YAML file.
+     * @throws Exception if the YAML libraries have any issues with ERRORs inthe YAML or other issues.
      */
-    public void test( final java.io.Writer _javawriter, final org.yaml.snakeyaml.nodes.Node _output ) throws Exception
-    {
-        final org.yaml.snakeyaml.DumperOptions dumperOptions = this.defaultConfigurationForSnakeYamlWriter();
-        final org.yaml.snakeyaml.emitter.Emitter snakeemitter = new Emitter( _javawriter, dumperOptions );
-        final org.yaml.snakeyaml.resolver.Resolver resolver = new Resolver();
-        final org.yaml.snakeyaml.nodes.Tag tag = Tag.STR;
-        final org.yaml.snakeyaml.serializer.Serializer serializer = new Serializer( snakeemitter, resolver, dumperOptions, tag );
-        try {
-            serializer.open();
-            serializer.serialize( _output );
-            // while (data.hasNext()) {
-            //    Node node = representer.represent(data.next());
-            //    serializer.serialize(node);
-            // }
-            serializer.close();
-        } catch (java.io.IOException e) {
-            throw new Exception(e);
-        }
-    }
+    // public void write( final Object _output ) throws Exception
+    // {
+    //     final org.yaml.snakeyaml.DumperOptions dumperOptions = GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter();
+    //     this.write( _output, dumperOptions );
+    // }
 
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -222,7 +182,7 @@ public class GenericYAMLWriter {
      * @param _output the content you want written out as a YAML file.
      * @throws Exception if the YAML libraries have any issues with ERRORs inthe YAML or other issues.
      */
-    public void write( final Object _output ) throws Exception
+    public void write( final Object _output, final DumperOptions _dumperoptions ) throws Exception
     {
         // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
         switch ( this.getYamlLibrary() ) {
@@ -231,8 +191,37 @@ public class GenericYAMLWriter {
                 // https://yaml.org/spec/1.2/spec.html#id2762107
                 // per https://bitbucket.org/asomov/snakeyaml/src/tip/src/test/java/examples/CustomMapExampleTest.java
                 // See also https://bitbucket.org/asomov/snakeyaml/wiki/Documentation#markdown-header-collections
-                if ( this.snakeYaml != null || this.snakeYamlWriter != null ) {
-                    this.snakeYaml.dump( _output, this.snakeYamlWriter );
+                if ( this.snakeYaml != null || this.javaWriter != null ) {
+                    assert( _output instanceof Node );
+                    @SuppressWarnings("unchecked")
+                    final Node _outputNode = (Node) _output;
+                    // this.snakeYaml.dump( _output, this.javaWriter );
+                    final org.yaml.snakeyaml.emitter.Emitter snakeemitter = new Emitter( this.javaWriter, _dumperoptions );
+                    final org.yaml.snakeyaml.resolver.Resolver resolver = new Resolver(); // we cannot pass NULL as 2nd parameter for BELOW-constructor for Serializer.  ugh!
+                    // final org.yaml.snakeyaml.nodes.Tag tag = Tag.YAML; // Do not pass this as last parameter of BELOW-constructor for Serializer).  It will cause the 1st line to have '!!YAML'
+                    final org.yaml.snakeyaml.serializer.Serializer serializer = new Serializer( snakeemitter, resolver, _dumperoptions, null );
+                    try {
+                        serializer.open();
+                        serializer.serialize( _outputNode );
+                        // while ( _outputdata.hasNext()) {
+                        //    Node node = representer.represent(data.next()); // do NOT use org.yaml.snakeyaml.representer.Representer!!!!  It might cause as MANY problems as using org.yaml.snakeyaml.constructor.Constructor.
+                        //    serializer.serialize(node);
+                        // }
+                        serializer.close();
+                    } catch (java.io.IOException e) {
+                        throw new Exception(e);
+                    }
+                    // //-------------------------------------------------
+                    // org.yaml.snakeyaml.emitter.Emitter emitter = new org.yaml.snakeyaml.emitter.Emitter( _javawriter, new org.yaml.snakeyaml.DumperOptions() );
+                    // try {
+                    //     for ( org.yaml.snakeyaml.events.Event event : document) {
+                    //         emitter.emit(event);
+                    //     }
+                    //     fail("Loading must fail for " + files[i].getAbsolutePath());
+                    //     System.err.println("Loading must fail for " + files[i].getAbsolutePath());
+                    // } catch( org.yaml.snakeyaml.error.YAMLException e ) {
+                    // } catch (Exception e) {
+                    // }
                 } else {
                     throw new Exception( CLASSNAME +" write("+ this.getYamlLibrary() +"): cannot invoke write() before prepare()." );
                 } // if esotericsoftwareWriter !=   null
@@ -280,13 +269,18 @@ public class GenericYAMLWriter {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
-    public org.yaml.snakeyaml.DumperOptions defaultConfigurationForSnakeYamlWriter() throws Exception
+    /**
+     * This method returns the default configuration options (that influece HOW YAML is written by SnakeYaml library).
+     * @return the configuration as an object-instance of type org.yaml.snakeyaml.DumperOptions
+     * @throws Exception some of the methods of org.yaml.snakeyaml.DumperOptions throw exceptions
+     */
+    public static final org.yaml.snakeyaml.DumperOptions defaultConfigurationForSnakeYamlWriter() throws Exception
     {
 
         // DumperOptions.ScalarStyle = DOUBLE_QUOTED('"'), SINGLE_QUOTED('\''), LITERAL('|'), FOLDED('>'), PLAIN(null);
         // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
         final org.yaml.snakeyaml.DumperOptions dopt = new org.yaml.snakeyaml.DumperOptions(); // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
-        // dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.SINGLE_QUOTED );
+        dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.SINGLE_QUOTED );
                                                 // other value are: PLAIN(a.k.a. nothing), DOUBLE_QUOTED, FOLDED('>')
         // dopt.setIndent( 3 );
         dopt.setCanonical( false );
@@ -298,5 +292,9 @@ public class GenericYAMLWriter {
         // Not yet available in latest release:- dopt.setNonPrintableStyle( org.yaml.snakeyaml.DumperOptions.NonPrintableStyle.ESCAPE ); // When String contains non-printable characters SnakeYAML convert it to binary data with the !!binary tag. Set this to ESCAPE to keep the !!str tag and escape the non-printable chars with \\x or \\u
         return dopt;
     }
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
 
 }
