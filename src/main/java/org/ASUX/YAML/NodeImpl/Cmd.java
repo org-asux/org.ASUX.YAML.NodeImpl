@@ -34,8 +34,6 @@ package org.ASUX.YAML.NodeImpl;
 
 import org.ASUX.common.Debug;
 
-import org.ASUX.yaml.CmdLineArgsBasic;
-import org.ASUX.yaml.CmdLineArgs;
 import org.ASUX.yaml.YAMLPath;
 
 import java.io.InputStreamReader;
@@ -83,10 +81,10 @@ import static org.junit.Assert.*;
  * @see org.ASUX.yaml.YAMLPath
  * @see org.ASUX.yaml.CmdLineArgsBasic
  *
- * @see org.ASUX.yaml.NodeImpl.ReadYamlEntry
- * @see org.ASUX.yaml.NodeImpl.ListYamlEntry
- * @see org.ASUX.yaml.NodeImpl.DeleteYamlEntry
- * @see org.ASUX.yaml.NodeImpl.ReplaceYamlEntry
+ * @see org.ASUX.YAML.NodeImpl.ReadYamlEntry
+ * @see org.ASUX.YAML.NodeImpl.ListYamlEntry
+ * @see org.ASUX.YAML.NodeImpl.DeleteYamlEntry
+ * @see org.ASUX.YAML.NodeImpl.ReplaceYamlEntry
  */
 public class Cmd {
 
@@ -105,38 +103,34 @@ public class Cmd {
     public static void main( String[] args )
     {
         final String HDR = CLASSNAME + ": main(String[]): ";
-        CmdLineArgsBasic cmdLineArgsBasic = null;
-        CmdLineArgs cmdlineargs = null;
+        // org.ASUX.yaml.CmdLineArgsBasic cmdLineArgsBasic = null;
+        org.ASUX.yaml.CmdLineArgs cmdlineargs = null;
         final java.io.StringWriter stdoutSurrogate = new java.io.StringWriter();
 
         try {
-            cmdLineArgsBasic = new CmdLineArgsBasic( args );
-            if (cmdLineArgsBasic.verbose) { System.out.print( HDR +" >>>>>>>>>>>>> "); for( String s: args) System.out.print(s);  System.out.println(); }
-
-            cmdlineargs = cmdLineArgsBasic.getSpecificCmd();
-            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" cmdlineargs=["+ cmdlineargs +"]" );
+            cmdlineargs = CmdLineArgs.create( args );
 
             org.ASUX.YAML.NodeImpl.CmdInvoker cmdinvoker = new org.ASUX.YAML.NodeImpl.CmdInvoker( cmdlineargs.verbose, cmdlineargs.showStats );
-            if (cmdLineArgsBasic.verbose) System.out.println( HDR +"getting started with cmdline args = " + cmdlineargs + " " );
+            if (cmdlineargs.verbose) System.out.println( HDR +"getting started with cmdline args = " + cmdlineargs + " " );
 
-            cmdinvoker.setYamlLibrary( cmdLineArgsBasic.YAMLLibrary );
-            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" set YAML-Library to [" + cmdLineArgsBasic.YAMLLibrary + " and [" + cmdinvoker.getYamlLibrary() + "]" );
+            cmdinvoker.setYamlLibrary( cmdlineargs.YAMLLibrary );
+            if (cmdlineargs.verbose) System.out.println( HDR +" set YAML-Library to [" + cmdlineargs.YAMLLibrary + " and [" + cmdinvoker.getYamlLibrary() + "]" );
 
             //=============================================================
             // read input, whether it's System.in -or- an actual input-file
-            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" about to load file: " + cmdlineargs.inputFilePath );
+            if (cmdlineargs.verbose) System.out.println( HDR +" about to load file: " + cmdlineargs.inputFilePath );
             final java.io.InputStream is1 = ( cmdlineargs.inputFilePath.equals("-") ) ? System.in
                     : new java.io.FileInputStream(cmdlineargs.inputFilePath);
             final java.io.Reader filereader = new java.io.InputStreamReader(is1);
 
             final Node inputNode = cmdinvoker.getYamlScanner().load( filereader );
 
-            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" loaded data = " + inputNode + " " );
-            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" loaded data of type [" + inputNode.getType() + "]" );
+            if (cmdlineargs.verbose) System.out.println( HDR +" loaded data = " + inputNode + " " );
+            if (cmdlineargs.verbose) System.out.println( HDR +" loaded data of type [" + inputNode.getType() + "]" );
 
             // -----------------------
             // PRE-YAML processing
-            switch ( cmdLineArgsBasic.cmdType ) {
+            switch ( cmdlineargs.cmdType ) {
                 case READ:
                 case LIST:
                 case DELETE:
@@ -151,7 +145,7 @@ public class Cmd {
             //======================================================================
             // run the command requested by user
             final Object output = cmdinvoker.processCommand( cmdlineargs, inputNode );
-            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" processing of entire command returned [" + (output==null?"null":output.getClass().getName()) + "]" );
+            if (cmdlineargs.verbose) System.out.println( HDR +" processing of entire command returned [" + (output==null?"null":output.getClass().getName()) + "]" );
 
             //======================================================================
             final java.io.Writer javawriter = ( cmdlineargs.outputFilePath.equals("-") )
@@ -160,25 +154,21 @@ public class Cmd {
 
             final GenericYAMLWriter writer = cmdinvoker.getYamlWriter();
             final DumperOptions dumperopts = cmdinvoker.dumperopt;
-            if (cmdLineArgsBasic.verbose) System.out.println( HDR +" GenericYAMLWriter writer has YAML-Library set to [" + writer.getYamlLibrary() + "]" );
+            if (cmdlineargs.verbose) System.out.println( HDR +" GenericYAMLWriter writer has YAML-Library set to [" + writer.getYamlLibrary() + "]" );
             writer.prepare( javawriter, dumperopts );
 
             //======================================================================
             // post-completion of YAML processing
-            switch ( cmdLineArgsBasic.cmdType ) {
+            switch ( cmdlineargs.cmdType ) {
                 case READ:
                 case LIST:
                 case TABLE:
-                    // @SuppressWarnings("unchecked")
-                    // final Node list = ( Node ) output;
-                    // writer.write( list );
-                    // break;
                 case DELETE:
                 case INSERT:
                 case REPLACE:
                 case MACRO:
                 case BATCH:
-                    if (cmdLineArgsBasic.verbose) System.out.println( HDR +" final output is of type " + output.getClass().getName() + "]" );
+                    if (cmdlineargs.verbose) System.out.println( HDR +" final output is of type " + output.getClass().getName() + "]" );
                     writer.write( output, dumperopts );
                     break;
             }
@@ -195,33 +185,26 @@ public class Cmd {
 
             // Now since we have a surrogate for STDOUT for use by , let's dump its output onto STDOUT!
             if ( cmdlineargs.outputFilePath.equals("-") ) {
-                if (cmdLineArgsBasic.verbose) System.out.println( HDR +" dumping the final output to STDOUT" );
+                if (cmdlineargs.verbose) System.out.println( HDR +" dumping the final output to STDOUT" );
                 String outputStr = stdoutSurrogate.toString();
-                // // The following IF exists, cuz the SnakeYaml library is 
-                // if ( outputStr == null || outputStr.matches("\\s*null\\s*") )
-                //     outputStr = "";
                 System.out.println( outputStr );
-                //     final java.util.Scanner scanner = new java.util.Scanner( reader );
-                //     while (scanner.hasNextLine()) {
-                //         System.out.println( scanner.nextLine() );
-                //     }
             }
 
         } catch (YAMLPath.YAMLPathException e) {
-            e.printStackTrace(System.err);
-            System.err.println( "YAML-Path pattern is invalid: '" + cmdlineargs + "'.");
+            if ( cmdlineargs == null || cmdlineargs.verbose ) e.printStackTrace(System.err);
+            System.err.println( "YAML-Path pattern is invalid.\nCmdline arguments provided are: " + cmdlineargs + "\n"+ e );
             System.exit(8);
         } catch (java.io.FileNotFoundException e) {
-            e.printStackTrace(System.err);
-            System.err.println( "INPUT-File Not found: '" + cmdlineargs.inputFilePath + "'.");
+            if ( cmdlineargs == null || cmdlineargs.verbose ) e.printStackTrace(System.err);
+            System.err.println( "INPUT-File Not found: '" + cmdlineargs.inputFilePath + "'\nCmdline arguments provided are: " + cmdlineargs + "\n"+ e );
             System.exit(8);
         } catch (java.io.IOException e) {
-            e.printStackTrace(System.err);
-            System.err.println( "OUTPUT-File Not found: '" + cmdlineargs.outputFilePath + "'.");
+            if ( cmdlineargs == null || cmdlineargs.verbose ) e.printStackTrace(System.err);
+            System.err.println( "OUTPUT-File Not found: '" + cmdlineargs.outputFilePath + "'\nCmdline arguments provided are: " + cmdlineargs + "\nn"+ e );
             System.exit(7);
         } catch (Exception e) {
-            e.printStackTrace(System.err);
-            System.err.println( "Internal error: '" + cmdlineargs.outputFilePath + "'.");
+            if ( cmdlineargs == null || cmdlineargs.verbose ) e.printStackTrace(System.err);
+            System.err.println( "Internal error: '" + cmdlineargs.outputFilePath + "'\nCmdline arguments provided are: " + cmdlineargs + "\n"+ e );
             System.exit(6);
         }
 
