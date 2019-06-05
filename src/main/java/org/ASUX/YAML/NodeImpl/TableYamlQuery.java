@@ -53,12 +53,11 @@ import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
 
-/** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.yaml.AbstractYamlEntryProcessor}.</p>
+/** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class (org.ASUX.yaml.AbstractYamlEntryProcessor).</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
  *  <p>This class contains implementation for 4 "callbacks" - </p><ol><li> whenever there is partial match - on the way to a complete(a.k.a. end2end match) </li><li> whenever a full match is found </li><li> a match failed (which implies, invariably, to keep searching till end of YAML file - but.. is a useful callback if you are using a "negative" pattern to search for YAML elements) </li><li> done processing entire YAML file</li></ol>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
- * @see org.ASUX.yaml.AbstractYamlEntryProcessor
  */
 public class TableYamlQuery extends AbstractYamlEntryProcessor {
 
@@ -84,7 +83,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _showStats Whether you want a final summary onto console / System.out
-     *  @param _do instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
+     *  @param _d instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
      *  @param _tableColumns a delimiter-separated list of "columns" (think SQL table columns).  The output of this table-yaml command is true 2-D table (2-D Array to be precise)
      *  @param _delim This delimiter should be used to separate the 'column-names' within the _tableColumns parameter.  pass in a value like '.'  '\t'   ','   .. pass in such a character as a string-parameter (being flexible in case delimiters can be more than a single character)
      *  @throws Exception if Pattern provided for YAML-Path is either semantically empty, Not a viable variable-name (see BatchFileGrammer.java's REGEXP_NAME constant) or is NOT java.util.Pattern compatible.
@@ -102,9 +101,9 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
         try {
             Pattern p = Pattern.compile(_delim);
         }catch(PatternSyntaxException e){
-            e.printStackTrace(System.err);
-            System.err.println( CLASSNAME +" Constructor: Invalid delimiter-pattern '"+ _delim +"' provided to constructor " );
-            return; // invalid YAML Path.  Let "this.isValid" stay as false
+            if ( _verbose ) e.printStackTrace(System.err);
+            System.err.println( CLASSNAME +" Constructor: Invalid delimiter-pattern '"+ _delim +"' provided to constructor "+ e );
+            throw e; // Should this method .. instead return for an invalid YAMLPath object.. .. and Let "this.isValid" stay as false ??
         }
 
         _tableColumns = _tableColumns.trim(); // strip leading and trailing whitesapce (Java11 user strip(), Java<11, use trim()
@@ -124,7 +123,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
                 else
                     throw new Exception( errMsg );
             }catch(PatternSyntaxException e){
-                e.printStackTrace(System.err);
+                if ( _verbose ) e.printStackTrace(System.err);
                 throw new Exception( errMsg );
             }
         }
