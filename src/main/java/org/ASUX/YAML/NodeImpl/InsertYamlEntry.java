@@ -53,12 +53,12 @@ import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/
 import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
 
-/** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.yaml.AbstractYamlEntryProcessor}.</p>
+/** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.YAML.NodeImpl.AbstractYamlEntryProcessor}.</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
  *  <p>This class contains implementation for 4 "callbacks" - </p><ol><li> whenever there is partial match - on the way to a complete(a.k.a. end2end match) </li><li> whenever a full match is found </li><li> a match failed (which implies, invariably, to keep searching till end of YAML file - but.. is a useful callback if you are using a "negative" pattern to search for YAML elements) </li><li> done processing entire YAML file</li></ol>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
- * @see org.ASUX.yaml.AbstractYamlEntryProcessor
+ *  @see org.ASUX.YAML.NodeImpl.AbstractYamlEntryProcessor
  */
 public class InsertYamlEntry extends AbstractYamlEntryProcessor {
 
@@ -67,6 +67,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     // Note: We need to remove the "old" - exactly as DeleteYamlEntry.java does.  Then we insert new value.
     protected final ArrayList< Tuple<Object, Node> > existingPathsForInsertion = new ArrayList<>();
     protected final ArrayList< Tuple< YAMLPath, Node> > newPaths2bCreated = new ArrayList<>();
+    final ArrayList< Tuple< YAMLPath, Node > > deepestNewPaths2bCreated = new ArrayList<>();
 
     protected final Object newData2bInserted;
 
@@ -79,7 +80,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _showStats Whether you want a final summary onto console / System.out
-     *  @param _do instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
+     *  @param _d instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
      *  @param _nob this can be either a java.lang.String or a org.yaml.snakeyaml.nodes.Node object
      *  @throws java.lang.Exception - if the _nob parameter is not as per above Spec
      */
@@ -102,10 +103,11 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     //==============================================================================
 
     /**
-     * <p>If the _nob (the new content provided as the ONLY parameter to the INSERT/REPLACE YAML command) is a Node.. then, do Nothing</p>
-     * <p>If the _nob (the new content provided as the ONLY parameter to the INSERT/REPLACE YAML command) is a java.lang.String.. then, convert it into a org.yaml.snakeyaml.nodes.ScalarNode.</p>
-     * <p>Otherwise throw an exception</p>
-     * @param _nob the new content provided as the ONLY parameter to the INSERT/REPLACE YAML command
+     *  <p>If the _nob (the new content provided as the ONLY parameter to the INSERT/REPLACE YAML command) is a Node.. then, do Nothing</p>
+     *  <p>If the _nob (the new content provided as the ONLY parameter to the INSERT/REPLACE YAML command) is a java.lang.String.. then, convert it into a org.yaml.snakeyaml.nodes.ScalarNode.</p>
+     *  <p>Otherwise throw an exception</p>
+     *  @param _nob the new content provided as the ONLY parameter to the INSERT/REPLACE YAML command
+     *  @return null or a Node
      *  @throws java.lang.Exception - if the _nob parameter is not as per above Spec
      */
     public final Node validateNewContent( final Object _nob ) throws Exception
@@ -130,7 +132,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     //==============================================================================
 
     /** This function will be called when a partial match of a YAML path-expression happens.
-     * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onPartialMatch}
+     * See details and warnings in {@link org.ASUX.YAML.NodeImpl.AbstractYamlEntryProcessor#onPartialMatch}
      */
     protected boolean onPartialMatch( final Node _node, final YAMLPath _yamlPath, final String _keyStr, final Node _parentNode, final LinkedList<String> _end2EndPaths )
     {   // Do Nothing for "Insert YAML-entry command"
@@ -139,7 +141,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
 
     //-------------------------------------
     /** This function will be called when a full/end2end match of a YAML path-expression happens.
-     * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch}
+     * See details and warnings in {@link org.ASUX.YAML.NodeImpl.AbstractYamlEntryProcessor#onEnd2EndMatch}
      */
     protected boolean onEnd2EndMatch( final YAMLPath _yamlPath, final Object _key, final Node _keyNode, final Node _valNode, final Node _parentNode, final LinkedList<String> _end2EndPaths )
     {
@@ -157,7 +159,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
 
     //-------------------------------------
     /** This function will be called whenever the YAML path-expression fails to match.
-     * See details and warnings in {@link org.ASUX.yaml.AbstractYamlEntryProcessor#onMatchFail}
+     * See details and warnings in {@link org.ASUX.YAML.NodeImpl.AbstractYamlEntryProcessor#onMatchFail}
      */
     protected void onMatchFail( final YAMLPath _yamlPath, final Node _parentNode, final Node _nodeNoMatch, final Object _key, final LinkedList<String> _end2EndPaths )
     {
@@ -181,56 +183,85 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     /** See details and warnings in {@link AbstractYamlEntryProcessor#atEndOfInput}
      * You can fuck with the contents of any of the parameters passed, to your heart's content.
      */
-    // *  @param _topmostNode the topmost Node in the input YAML
     // *  @throws Exception like ClassNotFoundException while trying to serialize and deserialize the input-parameter
     protected void atEndOfInput( final Node _topmostNode, final YAMLPath _yamlPath ) throws Exception
     {
         final String HDR = CLASSNAME + ": atEndOfInput(): ";
-
+        //------------------------------------------------
         this.output = _topmostNode; // this should handle all scenarios - except when '/' is the YAML path.
 
-        final Node newNode2bInserted = validateNewContent( this.newData2bInserted );
+        // Step 1: In case '/' is the YAML-Path-RegExp .. do it first .. before ANY CHecks (steps 2 & beyond)
         if ( YAMLPath.ROOTLEVEL.equals( _yamlPath.getRaw() ) ) // '/' is exactly the entire YAML-Path pattern provided by the user on the cmd line
-        {
-                if ( _topmostNode instanceof MappingNode && _topmostNode.getNodeId() == NodeId.mapping ) {
-                final MappingNode topmostMapN = (MappingNode) _topmostNode;
-                final java.util.List<NodeTuple> topmostTuples = topmostMapN.getValue();
-                if ( newNode2bInserted instanceof MappingNode ) {
-                    final MappingNode newMapN = (MappingNode) this.newData2bInserted;
-                    final java.util.List<NodeTuple> newTuples = newMapN.getValue();
-                    topmostTuples.addAll( newTuples );
-                } else {
-                    throw new Exception( "Invalid combination of new content and --input.  You provided new-content for "+ YAMLPath.ROOTLEVEL +" .. .. but provided new-content is NOT a proper 'Map' YAML. Instead new-content is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted.toString() +"]");
-                }
-            } else if ( _topmostNode instanceof SequenceNode && _topmostNode.getNodeId() == NodeId.sequence ) {
-                final SequenceNode seqN = (SequenceNode) _topmostNode;
-                final java.util.List<Node> seqs = seqN.getValue();
-                seqs.add( newNode2bInserted );
-            } else if ( _topmostNode instanceof ScalarNode && _topmostNode.getNodeId() == NodeId.scalar ) {
-                final ScalarNode scaN = (ScalarNode) _topmostNode;
-                throw new Exception( "Invalid use of '/' for YAML-Path-RegExp. You provided new content for "+ YAMLPath.ROOTLEVEL +" .. .. but the YAML provided via --input cmdlime optiom is a SIMPLE SCALAR Node containing the string-value ["+ scaN.getValue() +"]  .. full Node details = ["+ scaN +"]");
-            } else {
-                throw new Exception( HDR +": Serious ERROR B: You provided new content for "+ YAMLPath.ROOTLEVEL +" .. .. but the YAML provided via --input cmdlime optiom is is of __UNKNOWN__ type ["+ _topmostNode.getClass().getName() +"]  with value = ["+ _topmostNode +"]");
-            }
-            // if ( newNode2bInserted instanceof MappingNode ) {
-            //     this.output = (MappingNode) this.newData2bInserted;
-            // } else if ( newNode2bInserted instanceof SequenceNode ) {
-            //     this.output = (SequenceNode) this.newData2bInserted;
-            // } else if ( newNode2bInserted instanceof Node ) {
-            //     this.output = (Node) this.newData2bInserted;
-            // } else if ( this.newData2bInserted instanceof String ) {
-            //     final ScalarNode newnode = new ScalarNode( Tag.STR, this.newData2bInserted.toString(), null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
-            //     this.output = newnode; // !!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!! this.output is Not set to the 'default' == whatever was provided as input YAML for INSERT-Cmd
-            // } else {
-            //     throw new Exception( HDR +": Serious ERROR: You wanted to insert new content at / .. .. but provided content that is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted.toString() +"]");
-            // }
+        {   addContentAtSlash( _topmostNode, _yamlPath );
             return; // !!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!! This function returns here.
         }
-        // !!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!!
-        // If you want to use INSERT-CMD using '/' to add a ___2nd___ YAML document to an existing-YAML-file.. it will NOT WORK!!!
-        // Instead, use bash-shell-level commands to concatenate files;.
 
         //-------------------------------------------------
+        // Now that the AbstractYamlProcessor.java has recursively parsed the entire YAML.. .. we need to find out if there were ANY matches.
+        // if yes (there were matches).. insert the new content into EXISTING YAML LHS.
+        // if not.. 'mkdir -p'
+        if ( this.existingPathsForInsertion.size() >= 1 ) {
+            insertNewContentAtExistingNodes( false, _topmostNode, _yamlPath );
+            if ( this.showStats ) System.out.println( "count="+ this.existingPathsForInsertion.size() );
+            if ( this.verbose ) this.existingPathsForInsertion.forEach( tpl -> { System.out.println(tpl.key); } );
+            return; // !!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!! This function returns here.
+        }
+
+        // else.. .. continue below
+
+        //-------------------------------------------------
+        // Step 3: equivalent of 'mkdir -p' .. create all missing nodes.
+        mkdirMinusP_putContent( _topmostNode, _yamlPath );
+
+        if ( this.showStats ) System.out.println( "count="+ this.deepestNewPaths2bCreated.size() );
+        if ( this.verbose ) this.deepestNewPaths2bCreated.forEach( tpl -> { System.out.println(tpl.key); } );
+    }
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    protected void addContentAtSlash( final Node _topmostNode, final YAMLPath _yamlPath ) throws Exception
+    {
+        final String HDR = CLASSNAME + ": addContentAtSlash(): ";
+        final Node newNode2bInserted = validateNewContent( this.newData2bInserted );
+
+        if ( _topmostNode instanceof MappingNode && _topmostNode.getNodeId() == NodeId.mapping ) {
+            final MappingNode topmostMapN = (MappingNode) _topmostNode;
+            final java.util.List<NodeTuple> topmostTuples = topmostMapN.getValue();
+            if ( newNode2bInserted instanceof MappingNode ) {
+                final MappingNode newMapN = (MappingNode) this.newData2bInserted;
+                final java.util.List<NodeTuple> newTuples = newMapN.getValue();
+                topmostTuples.addAll( newTuples );
+            } else {
+                throw new Exception( "Invalid combination of new content and --input.  You provided new-content for "+ YAMLPath.ROOTLEVEL +" .. .. but provided new-content is NOT a proper 'Map' YAML. Instead new-content is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted.toString() +"]");
+            }
+        } else if ( _topmostNode instanceof SequenceNode && _topmostNode.getNodeId() == NodeId.sequence ) {
+            final SequenceNode seqN = (SequenceNode) _topmostNode;
+            final java.util.List<Node> seqs = seqN.getValue();
+            seqs.add( newNode2bInserted );
+        } else if ( _topmostNode instanceof ScalarNode && _topmostNode.getNodeId() == NodeId.scalar ) {
+            final ScalarNode scaN = (ScalarNode) _topmostNode;
+            throw new Exception( "Invalid use of '/' for YAML-Path-RegExp. You provided new content for "+ YAMLPath.ROOTLEVEL +" .. .. but the YAML provided via --input cmdlime optiom is a SIMPLE SCALAR Node containing the string-value ["+ scaN.getValue() +"]  .. full Node details = ["+ scaN +"]");
+        } else {
+            throw new Exception( HDR +": Serious ERROR B: You provided new content for "+ YAMLPath.ROOTLEVEL +" .. .. but the YAML provided via --input cmdlime optiom is is of __UNKNOWN__ type ["+ _topmostNode.getClass().getName() +"]  with value = ["+ _topmostNode +"]");
+        }
+    }
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     *  <p>This method is the core of what this entire class is primarily about.  "<em>Put this Content X at this location Y.</em>""
+     *  @param _bIsReplaceCmd this is true when this method is invoked from ReplaceYamlProcessor.java, and false when this method is invoked from within InsertYamlProcessor.java
+     *  @param _topmostNode the topmost Node in the input YAML
+     *  @param _yamlPath the YAMLPath object created from the user's command-line RegExp (it should be passed by the AbstractYamlProcess.java)
+     *  @throws Exception Very rarely should you expect an Exception. Best example: if there are any YAML-validation errors with new content provided
+     */
+    protected void insertNewContentAtExistingNodes( final boolean _bIsReplaceCmd, final Node _topmostNode, final YAMLPath _yamlPath ) throws Exception
+    {
+        final String HDR = CLASSNAME + ": insertNewContentAtExistingNodes(): ";
+        final Node newNode2bInserted = validateNewContent( this.newData2bInserted );
+        //------------------------------------------------
         // first loop goes over Paths that already exist, in the sense the leaf-element exists, and we'll add a new Child element to that.
         OUTERFORLOOP:
         for ( Tuple<Object, Node> tpl: this.existingPathsForInsertion ) {
@@ -255,13 +286,13 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                     final ScalarNode scalarN = (ScalarNode) keyN;
                     final String keyAsStr = scalarN.getValue();
                     assert( keyAsStr != null );
-                    if ( this.verbose ) System.out.println( CLASSNAME +" atEndOfInput(): found LHS, keyTag & RHS = ["+ keyN + "] !"+ scalarN.getTag().getValue() + " : "+ kv.getValueNode() + " ;" );
+                    if ( this.verbose ) System.out.println( HDR +" found LHS, keyTag & RHS = ["+ keyN + "] !"+ scalarN.getTag().getValue() + " : "+ kv.getValueNode() + " ;" );
 
                     if ( keyAsStr.equals(key2Search) ) {
                         bFound = true;
                         // Now put in a new entry - with the replacement data!  This is because NodeTuple is immutable, so it needs to be replaced (within tuples) with a new instance.
                         // newTuple = new NodeTuple( keyN, NodeTools.deepClone( newNode2bInserted ) );
-                        doInsertBasedOnNodeType( mapN, key2Search, NodeTools.deepClone( newNode2bInserted ) ); // This command will CHANGE the 'tuples' iterator used for the INNER FOR LOOP!!!!!
+                        doInsertBasedOnNodeType( _bIsReplaceCmd, mapN, key2Search, NodeTools.deepClone( newNode2bInserted ) ); // This command will CHANGE the 'tuples' iterator used for the INNER FOR LOOP!!!!!
                         // If there are multiple matches.. then without deepclone, the YAML implementation libraries (like Eso teric Soft ware)
                         // library, will use "&1" to define your 1st copy (in output) and put "*1" in
                         // all other locations this replacement text WAS SUPPOSED have been :-(
@@ -280,20 +311,29 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                 final SequenceNode seqN = (SequenceNode) tpl.val;
                 final java.util.List<Node> seqs = seqN.getValue();
                 seqs.add( ix.intValue(), newNode2bInserted );
+                if ( _bIsReplaceCmd && ix.intValue() < seqs.size() )
+                    seqs.remove( ix.intValue() + 1 );
 
             } else {
-                throw new Exception( CLASSNAME +": atEndOfInput(): UNEXPECTED Node/Tpl2["+ tpl.key.getClass().getName() +"]="+ tpl.key +" and the Key/Ref/Tpl1["+ tpl.val.getClass().getName() +"]= "+ tpl.val +" " );
+                throw new Exception( HDR +" UNEXPECTED Node/Tpl2["+ tpl.key.getClass().getName() +"]="+ tpl.key +" and the Key/Ref/Tpl1["+ tpl.val.getClass().getName() +"]= "+ tpl.val +" " );
             }
         } // OUTER for loop
+    }
 
-        if ( this.existingPathsForInsertion.size() >= 1 ) {
-            if ( this.showStats ) System.out.println( "count="+ this.existingPathsForInsertion.size() );
-            if ( this.showStats ) this.existingPathsForInsertion.forEach( tpl -> { System.out.println(tpl.key); } );
-            return; // !!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!! This function returns here.
-        }
-        // else continue below.
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-        //------------------------------------------------
+    /**
+     *  <p>This method is the semantic equivalent of 'mkdir -p' and then saving a file in the newly created bottommost-folder.</p>
+     *  <p>If the INSERT command's YAML-Path-RegExp is 'A,B,C', then if B and it's child YAML-element 'C' do Not exist.. create them.</p>
+     *  <p>After 'c' is created, insert the new content as the "RHS" for 'c' (assuming all checks-n-validations pass, if not exceptions are thrown)</p>
+     *  @param _topmostNode the topmost Node in the input YAML
+     *  @param _yamlPath the YAMLPath object created from the user's command-line RegExp (it should be passed by the AbstractYamlProcess.java)
+     *  @throws Exception Very rarely should you expect an Exception. Best example: if there are any YAML-validation errors with new content provided
+     */
+    protected void mkdirMinusP_putContent( final Node _topmostNode, final YAMLPath _yamlPath ) throws Exception
+    {
+        final String HDR = CLASSNAME + ": mkdirMinusP_putContent(): ";
+
         // if we are here, it means the YAMLPathRegExpr provided by user (via command-line) did Not match ANY EXACT YAML-contents.   That is, this.existingPathsForInsertion is 'empty'
         // By implication, it means there are ____MEANINGFUL_____ entries in this.newPaths2bCreated
 
@@ -308,7 +348,6 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
         }
 
         if ( this.verbose ) System.out.println( HDR +": longestDepth ="+ longestDepth +"]" );
-        final ArrayList< Tuple< YAMLPath, Node > > deepestNewPaths2bCreated = new ArrayList<>();
 
         outerloop:
         for ( Tuple< YAMLPath, Node > tpl : this.newPaths2bCreated ) {
@@ -316,23 +355,25 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
             if ( this.verbose ) System.out.println( HDR +": ypNew ="+ ypNew +"]" );
             if ( ypNew.index() >= longestDepth ) {
                 // let's check .. have we added it already?
-                for ( Tuple< YAMLPath, Node > tpl2 : deepestNewPaths2bCreated ) {
+                for ( Tuple< YAMLPath, Node > tpl2 : this.deepestNewPaths2bCreated ) {
                     final YAMLPath ypE = tpl2.key;
                     if ( YAMLPath.areEquivalent( ypNew, ypE ) )
                         continue outerloop;
                 } // inner for-loop
-                deepestNewPaths2bCreated.add ( tpl );
-                if ( this.verbose ) System.out.println( HDR +": added new entry "+tpl.key +" making deepestNewPaths2bCreated's size ="+ deepestNewPaths2bCreated.size() +"] for the newContent=/"+ tpl.val.toString() +"/" );
+                this.deepestNewPaths2bCreated.add ( tpl );
+                if ( this.verbose ) System.out.println( HDR +": added new entry "+tpl.key +" making deepestNewPaths2bCreated's size ="+ this.deepestNewPaths2bCreated.size() +"] for the newContent=/"+ tpl.val.toString() +"/" );
             }
         } // outer for-loop
-        // going forward.. ignore this.newPaths2bCreated
-        // instead use deepestNewPaths2bCreated (local variable).  Both are exactly the same class-type.
+
+        //------------------------------------------------
+        // for the rest of this method.. .. ignore 'this.newPaths2bCreated'
+        // instead use 'this.deepestNewPaths2bCreated' (local variable).  Both are exactly the same class-type.
 
         //------------------------------------------------
         // This 2nd loop is going to deal with WITH MISSING 'paths' to the missing leaf-element.
         // similar to how 'mkdir -p' works on Linux.
-        if ( this.verbose ) System.out.println( HDR +": deepestNewPaths2bCreated.size()="+ deepestNewPaths2bCreated.size() +"]" );
-        for ( Tuple< YAMLPath, Node > tpl : deepestNewPaths2bCreated ) {
+        if ( this.verbose ) System.out.println( HDR +": deepestNewPaths2bCreated.size()="+ this.deepestNewPaths2bCreated.size() +"]" );
+        for ( Tuple< YAMLPath, Node > tpl : this.deepestNewPaths2bCreated ) {
             final YAMLPath yp = tpl.key;
             final Node lowestExistingNode = tpl.val;
             final String prefix = yp.getPrefix();
@@ -348,7 +389,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
             } else if ( this.newData2bInserted instanceof String ) {
                 prevchildelem = new ScalarNode( Tag.STR, this.newData2bInserted.toString(), null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
             } else {
-                throw new Exception( HDR +": Serious ERROR #2: You wanted to insert new content at / .. .. but provided content that is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted +"]");
+                throw new Exception( HDR +": Serious ERROR #2: You wanted to insert new content at "+ yp +" .. .. but provided content that is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted +"]");
             }
 
             for( int ix=yp.yamlElemArr.length - 1;   ix > yp.index() ; ix-- ) {
@@ -366,38 +407,40 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
             final String existingKeyStr = yp.yamlElemArr[ yp.index() ];
             if ( this.verbose ) System.out.println( HDR +": Adding the final MISSING Path-elem @ ["+ yp.index() +"] = ["+ existingKeyStr +"]" );
             if ( this.verbose ) System.out.println( HDR +": Existing lowestExistingNode, which is now the parent Map = ["+ lowestExistingNode.toString() +"]" );
-            doInsertBasedOnNodeType( lowestExistingNode, existingKeyStr, prevchildelem );
-        }
 
-        // java's forEach never works if you are altering anything within the Lambda body
-        // this.existingPathsForInsertion.forEach( tpl -> {tpl.val.remove(tpl.key); });
-        if ( this.showStats ) System.out.println( "count="+ deepestNewPaths2bCreated.size() );
-        if ( this.showStats ) this.newPaths2bCreated.forEach( tpl -> { System.out.println(tpl.key); } );
+            doInsertBasedOnNodeType( false, lowestExistingNode, existingKeyStr, prevchildelem );
+        }
     }
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
-    private void doInsertBasedOnNodeType( final Node lowestExistingNode, final String existingKeyStr, final Node prevchildelem ) throws Exception
+    private void doInsertBasedOnNodeType( final boolean _bIsReplaceCmd, final Node lowestExistingNode, final String _lhsKeyStr, final Node prevchildelem ) throws Exception
     {
-        final String HDR = CLASSNAME +": doInsertBasedOnNodeType(lowestExistingNode["+ lowestExistingNode.getNodeId() +"],"+existingKeyStr+",prevchildelem) ";
+        final String HDR = CLASSNAME +": doInsertBasedOnNodeType(lowestExistingNode["+ lowestExistingNode.getNodeId() +"],"+_lhsKeyStr+",prevchildelem) ";
+
         if ( lowestExistingNode.getNodeId() == NodeId.mapping && lowestExistingNode instanceof MappingNode ) {
             final MappingNode existingMapNode = (MappingNode) lowestExistingNode;
             final java.util.List<NodeTuple> tuples = existingMapNode.getValue();
             // since this is all NEW content and even NEW Parent Node-heirarchy.. we'll assume a simple 'ad()' into the tuples List<> object will work without any issues.
-            final NodeTuple kv = NodeTools.getNodeTuple( existingMapNode, existingKeyStr );
+            final NodeTuple kv = NodeTools.getNodeTuple( existingMapNode, _lhsKeyStr );
 assert( kv != null );  // if we look up the existingMapNode.. why on earth should this be null?
+
             if ( kv == null ) {
-                if ( this.verbose ) System.out.println( HDR +" getNodeTuple( existingMapNode, existingKeyStr="+ existingKeyStr +" ) == null. So.. adding new NodeTuple @ that location to 'tuples'." );
-                final ScalarNode newKeySN = new ScalarNode( Tag.STR,     existingKeyStr,     null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
+                // the lowestExistingNode does NOT have a SPECIFIC EXISTING 'lhs: rhs' entry WHERE lhs===_lhsKeyStr
+                if ( this.verbose ) System.out.println( HDR +" getNodeTuple( existingMapNode, _lhsKeyStr="+ _lhsKeyStr +" ) == null. So.. adding new NodeTuple @ that location to 'tuples'." );
+                final ScalarNode newKeySN = new ScalarNode( Tag.STR,     _lhsKeyStr,     null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
                 tuples.add( new NodeTuple( newKeySN,  prevchildelem) );
             } else {
+                // Oh!  the lowestExistingNode __ALREADY__ has a SPECIFIC EXISTING 'lhs: rhs' entry WHERE lhs===_lhsKeyStr !
                 final Node keyN = kv.getKeyNode();
                 final ScalarNode scalarKeyN = (ScalarNode) keyN;
                 final String keyAsStr = scalarKeyN.getValue();
                 final Node valN = kv.getValueNode();
-                if ( this.verbose ) System.out.println( HDR +": lowestExistingNode already has a NodeTuple @ keyStr="+ existingKeyStr +" with RHSNode's Type="+ valN.getNodeId() +" whose RHSValue="+ valN +" " );
+                if ( this.verbose ) System.out.println( HDR +": lowestExistingNode already has a NodeTuple @ keyStr="+ _lhsKeyStr +" with RHSNode's Type="+ valN.getNodeId() +" whose RHSValue="+ valN +" " );
+
+                // the following nested-IF-ELSE is about .. whether (for the EXISTING 'lhs: rhs') .. rhs is a MappingNode or a SequenceNode or a ScalarNode
                 if ( valN.getNodeId() == NodeId.mapping && valN instanceof MappingNode ) {
                     final MappingNode mapN = (MappingNode) valN;
                     final java.util.List<NodeTuple> rhsTuples = mapN.getValue();
@@ -405,9 +448,8 @@ assert( kv != null );  // if we look up the existingMapNode.. why on earth shoul
                 } else if ( valN.getNodeId() == NodeId.scalar && valN instanceof ScalarNode ) {
                     final ScalarNode scalarValN = (ScalarNode) valN;
                     // Since this method is common to both InsertYamlEntry.java and ReplaceYamlEntry.java (which is a subclass of InsertYamlEntry.java) .. we need to distinguish.
-                    final boolean bIsReplaceCmd = (this instanceof ReplaceYamlEntry );
-                    if ( bIsReplaceCmd || scalarValN.getValue().matches("\\s*") ) {
-                        if ( this.verbose ) System.out.println( HDR +": REPLACING the RHS for lowestExistingNode @ keyStr="+ existingKeyStr +" with RHS='"+ scalarValN.getValue() +"' " );
+                    if ( _bIsReplaceCmd || scalarValN.getValue().matches("\\s*") ) {
+                        if ( this.verbose ) System.out.println( HDR +": REPLACING the RHS for lowestExistingNode @ keyStr="+ _lhsKeyStr +" with RHS='"+ scalarValN.getValue() +"' " );
                         final NodeTuple newkv = new NodeTuple( keyN, prevchildelem );
                          // since NodeTuples are immutable.. we remove the old entry and add the new entry.
                         final int ix = tuples.indexOf( kv ); // ix === location of existing NodeTuple within 'tuples'
@@ -420,14 +462,15 @@ assert( kv != null );  // if we look up the existingMapNode.. why on earth shoul
                 } else if ( valN.getNodeId() == NodeId.sequence && valN instanceof SequenceNode ) {
                     final SequenceNode seqN = (SequenceNode) valN;
                     final java.util.List<Node> listOfNodes = seqN.getValue();
-                    if ( this.verbose ) System.out.println( HDR +": lowestExistingNode @ keyStr="+ existingKeyStr +" is a SequenceNode ="+ seqN +" " );
+                    if ( this.verbose ) System.out.println( HDR +": lowestExistingNode @ keyStr="+ _lhsKeyStr +" is a SequenceNode ="+ seqN +" " );
                     listOfNodes.add ( prevchildelem );
-                } else { // valN is neither MappingNode nor a ScalarNode
+                } else {
+                    // valN is neither MappingNode nor a ScalarNode
                     throw new Exception( "The existing node @ LHS="+ keyAsStr +" has an RHS is of type="+ valN.getNodeId() +" and value='"+ valN +"'. For insert /Replace Command, Not sure how to handle this!  " );
                 }
             }
         } else {
-            throw new Exception( "Serious ERROR #3: You wanted to insert new content at "+ existingKeyStr +" .. .. but the Node at that LOCATION .. is of type ["+ lowestExistingNode.getClass().getName() +"]  with value = ["+ lowestExistingNode +"]");
+            throw new Exception( "Serious ERROR #3: You wanted to insert new content at "+ _lhsKeyStr +" .. .. but the Node at that LOCATION .. is of type ["+ lowestExistingNode.getClass().getName() +"]  with value = ["+ lowestExistingNode +"]");
         }
     }
 
