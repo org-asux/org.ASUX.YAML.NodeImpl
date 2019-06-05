@@ -54,10 +54,11 @@ import static org.junit.Assert.*;
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>This abstract class has 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace).</p>
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org-ASUX.github.io/wiki">org.ASUX Wiki</a> of the GitHub.com projects.</p>
- * @see org.ASUX.yaml.NodeImpl.ReadYamlEntry
- * @see org.ASUX.yaml.NodeImpl.ListYamlEntry
- * @see org.ASUX.yaml.NodeImpl.DeleteYamlEntry
- * @see org.ASUX.yaml.NodeImpl.ReplaceYamlEntry
+ * @see org.ASUX.YAML.NodeImpl.ReadYamlEntry
+ * @see org.ASUX.YAML.NodeImpl.ListYamlEntry
+ * @see org.ASUX.YAML.NodeImpl.DeleteYamlEntry
+ * @see org.ASUX.YAML.NodeImpl.ReplaceYamlEntry
+ * @see org.ASUX.YAML.NodeImpl.InsertYamlEntry
 */
 public abstract class AbstractYamlEntryProcessor {
 
@@ -81,7 +82,7 @@ public abstract class AbstractYamlEntryProcessor {
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _showStats Whether you want a final summary onto console / System.out
-     *  @param _do instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
+     *  @param _d instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
      */
     public AbstractYamlEntryProcessor( final boolean _verbose, final boolean _showStats, final DumperOptions _d ) {
         this.verbose = _verbose;
@@ -185,6 +186,10 @@ public abstract class AbstractYamlEntryProcessor {
         return retval;
     }
 
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
     /**
      * A convenience function, to cut down on code-size within recursiveSearch() below.. especially avoiding the SuppressWarnings("unchecked")
      * If null, you'll get an empty NEW LinkedList<String> object.
@@ -201,6 +206,18 @@ public abstract class AbstractYamlEntryProcessor {
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     * For use by sub-classes, in case they want to show where matches failed.
+     * @return a deepclone of the YAML-Path object that was created by the YAML-Path-RegularExpressions provided by the user on the cmdline
+     */
+    protected YAMLPath getYAMLPath() {
+        return YAMLPath.deepClone( this.yp );
+    }
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
 
     /** <p>This is a RECURSIVE-FUNCTION.  Make sure to pass in the right parameters.</p>
      *  <p><b>Don't tell me I did NOT warn you!</b>  Use the {@link searchYamlForPattern} function instead.</p>
@@ -525,7 +542,7 @@ public abstract class AbstractYamlEntryProcessor {
             // Not a single end2end match.  At best .. we can HOPE THAT we only had partial matches.
             // Specifically, when the YAMLPath is A.B.C.D (4-levels deep) and the YAML itself it < 4-levels deep.. we need to address such a scenario.
             // This above scenario.. in case of InsertYamlProcessor.java.. allows it to do the equivalent of 'mkdir -p'.
-            if ( this.verbose ) System.err.println( HDR +" recursiveSearch(): Not a single match for '"+ _yamlPath.toString() +"'");
+            if ( this.verbose ) System.out.println( HDR +" recursiveSearch(): Not a single match for '"+ _yamlPath.toString() +"'");
             onMatchFail( _yamlPath, _parentNode, _node, _yamlPath.yamlElemArr[ _yamlPath.yamlElemArr.length - 1 ], null); // location #11 for failure-2-match
             // final YAMLPath ypNoMatches = YAMLPath.deepClone(_yamlPath); // to keep _yamlPath intact within this function.. as it's passed by reference into this function.
             // ypNoMatches.skip2end();
