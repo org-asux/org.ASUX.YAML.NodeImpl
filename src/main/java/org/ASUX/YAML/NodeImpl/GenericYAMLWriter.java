@@ -105,7 +105,7 @@ public class GenericYAMLWriter {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /**
      * Tells you what internal implementation of the YAML read/parsing is, and by implication what the internal implementation for YAML-output generation is.
-     * @return a reference to the YAML Library in use. See {@link YAML_Libraries} for legal values.
+     * @return a reference to the YAML Library in use. See {@link org.ASUX.yaml.YAML_Libraries} for legal values.
      */
     public YAML_Libraries getYamlLibrary() {
         return this.sYAMLLibrary;
@@ -113,7 +113,7 @@ public class GenericYAMLWriter {
 
     /**
      * Allows you to set the YAML-parsing/emitting library of choice.  Ideally used within a Batch-Yaml script.
-     * @param _l the YAML-library to use going forward. See {@link YAML_Libraries} for legal values to this parameter
+     * @param _l the YAML-library to use going forward. See {@link org.ASUX.yaml.YAML_Libraries} for legal values to this parameter
      */
     public void setYamlLibrary( final YAML_Libraries _l ) {
         this.sYAMLLibrary = _l;
@@ -178,8 +178,10 @@ public class GenericYAMLWriter {
     //=================================================================================
 
     /**
-     * Write the YAML content (_output parameter) using the YAML-Library specified via {@link #setYamlLibrary} and to the java.io.Writer reference provided via {@link #prepare(java.io.Writer)}.
+     * Write the YAML content (_output parameter) using the YAML-Library specified via {@link #setYamlLibrary}
+     * and to the java.io.Writer reference provided via {@link #prepare}.
      * @param _output the content you want written out as a YAML file.
+     * @param _dumperoptions a non-null reference to org.yaml.snakeyaml.DumperOptions instance.  CmdInvoker can provide this reference.
      * @throws Exception if the YAML libraries have any issues with ERRORs inthe YAML or other issues.
      */
     public void write( final Object _output, final DumperOptions _dumperoptions ) throws Exception
@@ -243,7 +245,7 @@ public class GenericYAMLWriter {
     //=================================================================================
 
     /**
-     * Call this in exactly the way you'd close a file after writing to it.  This method should be called ONLY after {@link #write(Object)} will no longer be invoked.
+     * Call this in exactly the way you'd close a file after writing to it.  This method should be called ONLY after {@link #write} will no longer be invoked.
      * @throws Exception if the YAML libraries have any issues with ERRORs inthe YAML or other issues.
      */
     public void close() throws Exception {

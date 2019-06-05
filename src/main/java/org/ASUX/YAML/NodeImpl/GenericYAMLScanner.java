@@ -88,7 +88,7 @@ public class GenericYAMLScanner {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     /**
      * Tells you what internal implementation of the YAML read/parsing is, and by implication what the internal implementation for YAML-output generation is.
-     * @return a reference to the YAML Library in use. See {@link GenericYAMLScanner.YAML_Libraries} for legal values.
+     * @return a reference to the YAML Library in use. See {@link org.ASUX.yaml.YAML_Libraries} for legal values.
      */
     public YAML_Libraries getYamlLibrary() {
         return this.sYAMLLibrary;
@@ -96,7 +96,7 @@ public class GenericYAMLScanner {
 
     /**
      * Allows you to set the YAML-parsing/emitting library of choice.  Ideally used within a Batch-Yaml script.
-     * @param _l the YAML-library to use going forward. See {@link GenericYAMLScanner.YAML_Libraries} for legal values to this parameter
+     * @param _l the YAML-library to use going forward. See {@link org.ASUX.yaml.YAML_Libraries} for legal values to this parameter
      */
     public void setYamlLibrary( final YAML_Libraries _l ) {
         this.sYAMLLibrary = _l;
