@@ -60,10 +60,6 @@ import org.yaml.snakeyaml.serializer.Serializer;
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
  *  <p>This abstract class has 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace).</p>
  *  <p>See full details of how to use this, in {@link org.ASUX.yaml.Cmd} as well as the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com project.</p>
- * @see org.ASUX.yaml.ReadYamlEntry
- * @see org.ASUX.yaml.ListYamlEntry
- * @see org.ASUX.yaml.DeleteYamlEntry
- * @see org.ASUX.yaml.ReplaceYamlEntry
  */
 public class MacroYamlProcessor {
 
@@ -101,11 +97,11 @@ public class MacroYamlProcessor {
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+    // *  @param _output Pass in a new 'empty' org.yaml.snakeyaml.nodes.Node.  THis is what this function *RETURNS* after Macros are evalated within _input
     /** <p>This is a RECURSIVE-FUNCTION.  Make sure to pass in the right parameters.</p>
      *  <p>Note: this function expects you to pass in an empty org.yaml.snakeyaml.nodes.Node as the 2nd parameter.  It will be 'filled' when function returns.</p>
      *  <p>This function returns true, if ANY occurance of ${ASUX::__} was detected and evaluated. If false, _input and _outMap will be identical when function returns</p>
      *  @param _input A org.yaml.snakeyaml.nodes.Node (created by SnakeYAML library) containing the entire Tree representing the YAML file.
-     *  @param _output Pass in a new 'empty' org.yaml.snakeyaml.nodes.Node.  THis is what this function *RETURNS* after Macros are evalated within _input
      *  @param _props can be null, otherwise an instance of {@link java.util.Properties}
      *  @return true = whether at least one match of ${ASUX::} happened.
 	 *  @throws MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within org.ASUX.yaml.Macros.eval() functions
@@ -140,8 +136,8 @@ public class MacroYamlProcessor {
                 final String keytag = scalarKey.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
                 if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): found LHS, keyTag & RHS = ["+ key + "] !"+ keytag + " : "+ kv.getValueNode() + " ;" );
 
-				final String keyNM = org.ASUX.yaml.Macros.eval( scalarKey.getValue(), _props );
-				final String keytagNM = org.ASUX.yaml.Macros.eval( keytag, _props );
+				final String keyNM = org.ASUX.yaml.Macros.eval( this.verbose, scalarKey.getValue(), _props );
+				final String keytagNM = org.ASUX.yaml.Macros.eval( this.verbose, keytag, _props );
 				assert( keyNM != null );
 				final ScalarNode newkeynode = new ScalarNode( new Tag(keytagNM), keyNM, scalarKey.getStartMark(), scalarKey.getEndMark(), scalarKey.getScalarStyle() );
 				// ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
@@ -150,9 +146,9 @@ public class MacroYamlProcessor {
 
                 if ( valNode.getNodeId() == NodeId.scalar) {
                     final ScalarNode scalarVal = (ScalarNode) valNode;
-					final String valNM = org.ASUX.yaml.Macros.eval( scalarVal.getValue(), _props );
+					final String valNM = org.ASUX.yaml.Macros.eval( this.verbose, scalarVal.getValue(), _props );
 					final String valtag = scalarVal.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
-					final String valtagNM = org.ASUX.yaml.Macros.eval( valtag, _props );
+					final String valtagNM = org.ASUX.yaml.Macros.eval( this.verbose, valtag, _props );
 					final ScalarNode newvalnode = new ScalarNode( new Tag(valtagNM), valNM, scalarVal.getStartMark(), scalarVal.getEndMark(), scalarVal.getScalarStyle() );
 					// ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
                     // String v = (scalarVal.getTag().startsWith("!")) ? (scalarVal.getTag()+" ") : "";
@@ -182,9 +178,9 @@ public class MacroYamlProcessor {
             for( Node valNode: seqs ) {
                 if ( valNode.getNodeId() == NodeId.scalar) {
                     final ScalarNode scalarVal = (ScalarNode) valNode;
-					final String valNM = org.ASUX.yaml.Macros.eval( scalarVal.getValue(), _props );
+					final String valNM = org.ASUX.yaml.Macros.eval( this.verbose, scalarVal.getValue(), _props );
 					final String valtag = scalarVal.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
-					final String valtagNM = org.ASUX.yaml.Macros.eval( valtag, _props );
+					final String valtagNM = org.ASUX.yaml.Macros.eval( this.verbose, valtag, _props );
 					final ScalarNode newvalnode = new ScalarNode( new Tag(valtagNM), valNM, scalarVal.getStartMark(), scalarVal.getEndMark(), scalarVal.getScalarStyle() );
 					// ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
                     // String v = (scalarVal.getTag().getValue().startsWith("!")) ? (scalarVal.getTag().getValue()+" ") : "";
@@ -205,9 +201,9 @@ public class MacroYamlProcessor {
         } else if ( _input instanceof ScalarNode ) {
             // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/nodes/ScalarNode.java
             final ScalarNode scalarVal = (ScalarNode) _input;
-            final String valNM = org.ASUX.yaml.Macros.eval( scalarVal.getValue(), _props );
+            final String valNM = org.ASUX.yaml.Macros.eval( this.verbose, scalarVal.getValue(), _props );
             final String valtag = scalarVal.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
-            final String valtagNM = org.ASUX.yaml.Macros.eval( valtag, _props );
+            final String valtagNM = org.ASUX.yaml.Macros.eval( this.verbose, valtag, _props );
             final ScalarNode newvalnode = new ScalarNode( new Tag(valtagNM), valNM, scalarVal.getStartMark(), scalarVal.getEndMark(), scalarVal.getScalarStyle() );
             // ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
             // String v = (scalarVal.getTag().startsWith("!")) ? (scalarVal.getTag()+" ") : "";
@@ -267,7 +263,7 @@ public class MacroYamlProcessor {
 		// 				newarr.add( newMap2 );
 		// 			} else if ( o instanceof java.lang.String ) {
 		// 				// by o.toString(), I'm cloning the String object.. .. so both _input and _output do NOT share the same String object
-		// 				newarr.add ( org.ASUX.yaml.Macros.eval( o.toString(), _props ) );
+		// 				newarr.add ( org.ASUX.yaml.Macros.eval( this.verbose, o.toString(), _props ) );
 		// 			} else {
 		// 				System.err.println( CLASSNAME +": recursiveSearch(): incomplete code #1: failure w Array-type '"+ o.getClass().getName() +"'");
 		// 				System.exit(92); // This is a serious failure. Shouldn't be happening.
@@ -280,7 +276,7 @@ public class MacroYamlProcessor {
 		// 	} else if ( rhsObj instanceof java.lang.String ) {
 		// 		// by rhsObj.toString(), I'm cloning the String object.. .. so both _input and _output do NOT share the same String object
 		// 		final String asis = rhsObj.toString();
-		// 		final String news = org.ASUX.yaml.Macros.eval( asis, _props);
+		// 		final String news = org.ASUX.yaml.Macros.eval( this.verbose, asis, _props);
 		// 		if (   !    asis.equals(news) ) this.changesMade ++;
 		// 		_output.put( key, news );
 		// 		// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
