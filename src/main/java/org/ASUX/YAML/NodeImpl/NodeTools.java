@@ -121,11 +121,11 @@ public class NodeTools {
             return strwrtr3.toString();
 
         } catch (java.io.IOException e) {
-            e.printStackTrace(System.err);
+            e.printStackTrace(System.err); // No 'verbose' variable present in Node2YAMLString(). printStackTrace() happens even if user did NOT ask for --verbose
             System.err.println( HDR +"Failure to read/write the contents: '" + _orig +"'." );
             throw e;
         } catch (Exception e) {
-            e.printStackTrace(System.err);
+            e.printStackTrace(System.err); // No 'verbose' variable present in Node2YAMLString(). printStackTrace() happens even if user did NOT ask for --verbose
             System.err.println( HDR +"Unknown Internal error re: '" + _orig +"'." );
             throw e;
         }
@@ -153,11 +153,11 @@ public class NodeTools {
             return yamlscanner.load( strrdr );
 
         } catch (java.io.IOException e) {
-            e.printStackTrace(System.err);
+            e.printStackTrace(System.err); // No 'verbose' variable present in YAMLString2Node(). printStackTrace() happens even if user did NOT ask for --verbose
             System.err.println( HDR +"Failure to read/write the contents: '" + _yamlString +"'." );
             throw e;
         } catch (Exception e) {
-            e.printStackTrace(System.err);
+            e.printStackTrace(System.err); // No 'verbose' variable present in YAMLString2Node(). printStackTrace() happens even if user did NOT ask for --verbose
             System.err.println( HDR +"Unknown Internal error re: '" + _yamlString +"'." );
             throw e;
         }
@@ -172,13 +172,13 @@ public class NodeTools {
      *  @param _dumperoptions important to pass in a non-null object.  This option is most valuable when you'll EVER save this new MappingNode into a file (or dump it to Stdout)
      *  @return a new ScalarNode, which when printed to a file/stdout will give you 'empty' content
      */
-    public static Node getEmptyYAML( final DumperOptions _dumperoptions ) throws Exception {
+    public static Node getEmptyYAML( final DumperOptions _dumperoptions ) {
         // throw new Exception( CLASSNAME +".getEmptyYAML(): This method is NOT yet implemented! " );
         // new Mark( "startMark", 1, 1, 1, "String buffer", 1)
         // new Mark( "endMark",   1, 1, 1, "String buffer", 2)
         // new MappingNode( Tag.MAP, false, new List<NodeTuple>(), Mark startMark, Mark endMark, DumperOptions.FlowStyle.BLOCK ) ;
         // return new ScalarNode( Tag.NULL, "null", null, null, DumperOptions.ScalarStyle.PLAIN ); // This should be representing an empty YAML.  I hope!
-        return new ScalarNode( Tag.NULL, "", null, null, _dumperoptions.getDefaultScalarStyle() ); // This should be representing an empty YAML.  I hope!      DumperOptions.ScalarStyle.PLAIN
+        return new ScalarNode( Tag.STR, "", null, null, _dumperoptions.getDefaultScalarStyle() ); // This should be representing an empty YAML.  I hope!      DumperOptions.ScalarStyle.PLAIN
     }
 
     //==============================================================================
@@ -234,7 +234,7 @@ public class NodeTools {
 
     /**
      *  <p>Given a YAML content (MORE SPECIFICALLY, an instance of org.yaml.snakeyaml.nodes.MappingNode), return the NodeTuple whose 'key/LHS' matches _keyStr.</p>
-     *  <p>ATTENTION! This method will only search within the immediate children of _mapnode.  It will NOT do a recursive search.  If you want a recursive deep-dive search, use {@link getNodeTupleRecursive}
+     *  <p>ATTENTION! This method will only search within the immediate children of _mapnode.  It will NOT do a recursive search.
      *  @param _mapnode an instance of org.yaml.snakeyaml.nodes.MappingNode (cannot be a simpler Node or SequenceNode)
      *  @param _keyStr the LHS to lookup within the MappingNode
      *  @return eiher null or an instance of org.yaml.snakeyaml.nodes.NodeTuple
@@ -263,7 +263,7 @@ public class NodeTools {
 
     /**
      *  <p>Given a YAML content (MORE SPECIFICALLY, an instance of org.yaml.snakeyaml.nodes.MappingNode), return the RHS of the NodeTuple whose 'key/LHS' matches _keyStr.</p>
-     *  <p>ATTENTION! This method will only search within the immediate children of _mapnode.  It will NOT do a recursive search.  If you want a recursive deep-dive search, use {@link getNodeTupleRecursive}
+     *  <p>ATTENTION! This method will only search within the immediate children of _mapnode.  It will NOT do a recursive search.
      *  @param _mapnode an instance of org.yaml.snakeyaml.nodes.MappingNode (cannot be a simpler Node or SequenceNode)
      *  @param _keyStr the LHS to lookup within the MappingNode
      *  @return eiher null or an instance of org.yaml.snakeyaml.nodes.Node
@@ -336,11 +336,11 @@ public class NodeTools {
             return yamlscanner.load( strrdr );
 
         } catch (java.io.IOException e) {
-            e.printStackTrace(System.err);
+            e.printStackTrace(System.err); // No 'verbose' variable present in deepClone(Node). printStackTrace() happens even if user did NOT ask for --verbose
             System.err.println( HDR +"Failure to read/write the contents: '" + _orig +"'." );
             throw e;
         } catch (Exception e) {
-            e.printStackTrace(System.err);
+            e.printStackTrace(System.err); // No 'verbose' variable present in deepClone(Node). printStackTrace() happens even if user did NOT ask for --verbose
             System.err.println( HDR +"Unknown Internal error re: '" + _orig +"'." );
             throw e;
         }
@@ -445,7 +445,7 @@ public class NodeTools {
     /**
      *  Takes a org.yaml.snakeyaml.nodes.Node object and converts it into a LinkedHashMap heirarchy that is compatible with ESO TERIC SOFT WARE'S YAML LIBRARY
      *  @param _verbose Whether you want deluge of debug-output onto System.out.
-     *  @param args an instance of org.yaml.snakeyaml.nodes.Node
+     *  @param _node an instance of org.yaml.snakeyaml.nodes.Node
      *  @return instance of {@link org.ASUX.common.Output.Object} which will contain the appropriate object.
      *  @throws Exception if any invalid Node object hierarchy, or if unimplemented scenarios.
      */
@@ -580,7 +580,7 @@ public class NodeTools {
 
     /**
      * org.yaml.snakeyaml.DumperOptions (like all SnakeYaml classes) does NOT have a toString() and does NOT implement java.io.Streamable.  Hence this static method to show what's inside a DumperOptions object.
-     * @param dumperoptions a non-null object.  Null will cause NullPointerException
+     * @param dumperopt a non-null object.  Null will cause NullPointerException
      */
     public static final void printDumperOptions( DumperOptions dumperopt ) {
         System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 Enums.ScalarStyle="+ org.ASUX.yaml.Enums.ScalarStyle.list(" / ") );
@@ -628,13 +628,13 @@ public class NodeTools {
         //     // LinkedHashMap<String, Object> map = tools.JSONS tring 2Node????????????????????????????????????????????( args[0] );
         //     // System.out.println("Normal completion of program");
         // // } catch (java.io.IOException e) {
-        // //     e.printStackTrace(System.err);
+        // //     e.printStackTrace(System.err); //main() for unit testing
         // //     System.exit(102);
         // } catch (Exception e) {
         //     if ( e.getMessage().contains("but found: scalar" ) ) {
         //         System.out.println("\n\n Just a string!" );
         //     } else {
-        //         e.printStackTrace(System.err);
+        //         e.printStackTrace(System.err); // main for unit testing
         //         System.exit(103);
         //     }
         // }
