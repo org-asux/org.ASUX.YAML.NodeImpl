@@ -314,19 +314,23 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
         case MACRO:
             final CmdLineArgsMacroCmd claMacro = (CmdLineArgsMacroCmd) cmdLineArgs;
             if (claMacro.verbose) System.out.println( HDR +" loading Props file [" + claMacro.propertiesFilePath + "]");
-            final Properties properties = new Properties();
             assert( claMacro.propertiesFilePath != null );
-            if ( claMacro.propertiesFilePath.startsWith("@") ) {
-                final java.io.InputStream istrm = new java.io.FileInputStream( claMacro.propertiesFilePath.substring(1) );
-                properties.load( istrm );
-            } else {
-                final java.io.StringReader sr = new java.io.StringReader( claMacro.propertiesFilePath );
-                properties.load( sr );
-            }
-            if (claMacro.verbose) System.out.println( HDR +" about to start MACRO command using: [Props file [" + claMacro.propertiesFilePath + "]");
+
             MacroYamlProcessor macro = new MacroYamlProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'dumperopt'
-            final Node outpData = macro.recursiveSearch( _inputNode, properties );  // this.getTools().YAMLString2Node("",false); // org.ASUX.YAML.NodeImpl.Tools.getEmptyYAML()
-            return outpData;
+            if ( "!AllProperties".equals( claMacro.propertiesFilePath ) ) {
+                final Node outpData = macro.recursiveSearch( _inputNode, null, this.memoryAndContext.getAllPropsRef() );
+                return outpData; // !!!!!!!!!!!! returns here.
+            }
+            // else continue below.
+            final Object content = this.getDataFromReference( claMacro.propertiesFilePath );
+            if ( ! (content instanceof Properties) ) {
+                throw new Exception( claMacro.propertiesFilePath +" is Not a java properties file, with the extension '.properties' .. or, it's contents are Not compatible with java.util.Properties" );
+            }; // else {
+                final Properties properties = (Properties) content;
+                if (claMacro.verbose) System.out.println( HDR +" about to start MACRO command using: [Props file [" + claMacro.propertiesFilePath + "]");
+                final Node outpData = macro.recursiveSearch( _inputNode, properties, this.memoryAndContext.getAllPropsRef() );
+                return outpData;
+            // }
 
         case BATCH:
             final CmdLineArgsBatchCmd claBatch = (CmdLineArgsBatchCmd) cmdLineArgs;
