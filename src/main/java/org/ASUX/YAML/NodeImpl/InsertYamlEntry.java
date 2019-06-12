@@ -444,7 +444,16 @@ assert( kv != null );  // if we look up the existingMapNode.. why on earth shoul
                 if ( valN.getNodeId() == NodeId.mapping && valN instanceof MappingNode ) {
                     final MappingNode mapN = (MappingNode) valN;
                     final java.util.List<NodeTuple> rhsTuples = mapN.getValue();
-                    rhsTuples.add( new NodeTuple( scalarKeyN,  prevchildelem) );
+                    if ( prevchildelem.getNodeId() == NodeId.mapping && prevchildelem instanceof MappingNode ) {
+                        final MappingNode newChildMapN = (MappingNode) prevchildelem;
+                        final java.util.List<NodeTuple> newChilRHSTuples = newChildMapN.getValue();
+                        rhsTuples.addAll( newChilRHSTuples );
+                    // } else if ( valN.getNodeId() == NodeId.scalar && valN instanceof ScalarNode ) {
+                    // } else if ( valN.getNodeId() == NodeId.sequence && valN instanceof SequenceNode ) {
+                    } else {
+                        throw new Exception( "The existing node @ LHS="+ keyAsStr +" RHS that is a 'Map', but the new content is NOT a 'Map'.  Instead it is of type '"+ valN.getNodeId() +"'. For Insert/ReplaceCommand, that is unacceptable." );
+                    }
+
                 } else if ( valN.getNodeId() == NodeId.scalar && valN instanceof ScalarNode ) {
                     final ScalarNode scalarValN = (ScalarNode) valN;
                     // Since this method is common to both InsertYamlEntry.java and ReplaceYamlEntry.java (which is a subclass of InsertYamlEntry.java) .. we need to distinguish.
@@ -454,16 +463,18 @@ assert( kv != null );  // if we look up the existingMapNode.. why on earth shoul
                          // since NodeTuples are immutable.. we remove the old entry and add the new entry.
                         final int ix = tuples.indexOf( kv ); // ix === location of existing NodeTuple within 'tuples'
                         tuples.add( ix, newkv); // insert BEFORE the EXISTING-NodeTuple 'kv'
-                        tuples.remove( ix + 1 ); // Now remove the EXISTING-NodeTuple, which got pushes to index-location (ix+1)
+                        tuples.remove( ix + 1 ); // Now remove the PREVIOUSLY-EXISTING-NodeTuple, which got pushed to index-location (ix+1) --by the previous statement.
                     } else {
                         // System.err.println( HDR +" " );
                         throw new Exception( "The existing node @ LHS="+ keyAsStr +" has an RHS with non-empty String/Scalar value of '"+ scalarValN.getValue() +"'. For insertCommand, that is unacceptable.  RHS should be either blank/'' or an org.yaml.snakeyaml.nodes.MappingNode!  " );
                     }
+
                 } else if ( valN.getNodeId() == NodeId.sequence && valN instanceof SequenceNode ) {
                     final SequenceNode seqN = (SequenceNode) valN;
                     final java.util.List<Node> listOfNodes = seqN.getValue();
                     if ( this.verbose ) System.out.println( HDR +": lowestExistingNode @ keyStr="+ _lhsKeyStr +" is a SequenceNode ="+ seqN +" " );
                     listOfNodes.add ( prevchildelem );
+
                 } else {
                     // valN is neither MappingNode nor a ScalarNode
                     throw new Exception( "The existing node @ LHS="+ keyAsStr +" has an RHS is of type="+ valN.getNodeId() +" and value='"+ valN +"'. For insert /Replace Command, Not sure how to handle this!  " );
