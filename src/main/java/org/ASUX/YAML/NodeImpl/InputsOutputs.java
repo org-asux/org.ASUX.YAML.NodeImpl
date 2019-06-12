@@ -42,6 +42,7 @@ import java.io.IOException;
 
 import java.util.regex.*;
 import java.util.LinkedHashMap;
+import java.util.Properties;
 
 // https://yaml.org/spec/1.2/spec.html#id2762107
 // import org.yaml.snakeyaml.Yaml;
@@ -140,6 +141,7 @@ public class InputsOutputs {
                 if ( _verbose ) System.out.println( HDR +" jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + retMap2 );
                 final Node retNode = NodeTools.Map2Node( _verbose, retMap2, _dumperopt );
                 return retNode;
+
             } else if ( srcFile.endsWith(".yaml") ) {
                 if ( _verbose ) System.out.println( HDR +" detected a YAML-file provided via '@'." );
                 final java.io.Reader reader1 = new java.io.InputStreamReader( fs  );
@@ -147,6 +149,15 @@ public class InputsOutputs {
                 reader1.close(); // automatically includes fs.close();
                 if ( _verbose ) System.out.println( HDR +" YAML loaded into tempOutputMap =" + output );
                 return output;
+
+            } else if ( srcFile.endsWith(".properties") ) {
+                final Properties properties = new Properties();
+                properties.load( fs );
+                return properties;
+
+            } else if ( "/dev/null".equals(srcFile) ) {
+                return new Properties(); // an empty Properties file.  /dev/null ==> by definition, we CANNOT TELL if its JSON or YAML.  So, Properties it is!
+
             } else {
                 if ( _verbose ) System.out.println( HDR +" detecting NEITHER a JSON NOR A YAML file provided via '@'." );
                 return null;
@@ -237,6 +248,7 @@ public class InputsOutputs {
                 // fs.close();
                 if ( _verbose ) System.out.println( HDR +" JSON written was =" + _input );
                 return;
+
             } else if ( destFile.endsWith(".yaml") ) {
                 if ( _verbose ) System.out.println( HDR +" detected a YAML-file provided via '@'." );
                 final java.io.FileWriter filewr = new java.io.FileWriter( destFile );
@@ -246,9 +258,10 @@ public class InputsOutputs {
                 filewr.close();
                 if ( _verbose ) System.out.println( HDR +" YAML written was =" + _input );
                 return;
+
             } else {
-                if ( _verbose ) System.out.println( HDR +" detecting NEITHER a JSON NOR A YAML file provided via '@'." );
-                throw new Exception("The saveTo @____ is NEITHER a YAML nor JSON file-name-extension.  Based on file-name-extension, the output is saved appropriately. ");
+                if ( _verbose ) System.out.println( HDR +"  FileNAME's extension is NEITHER a JSON NOR A YAML, as provided via '@'." );
+                throw new Exception("The argument passed to 'saveTo' is "+ _dest +".\nIt is NEITHER a YAML nor JSON file-name-extension.\nFYI: Based on file-name-extension, the content is saved appropriately. ");
             }
         } else {
             // Unlike load/read (as done in getDataFromReference()..) whether or not the user uses a !-prefix.. same action taken.
