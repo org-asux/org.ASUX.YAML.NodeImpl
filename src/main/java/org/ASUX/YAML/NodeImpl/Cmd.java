@@ -190,21 +190,25 @@ public class Cmd {
                 System.out.println( outputStr );
             }
 
-        } catch (YAMLPath.YAMLPathException e) {
-            if ( cmdlineargs == null || cmdlineargs.verbose ) e.printStackTrace(System.err);
-            System.err.println( "YAML-Path pattern is invalid.\nCmdline arguments provided are: " + cmdlineargs + "\n"+ e );
+        } catch ( org.apache.commons.cli.ParseException pe ) {
+            // ATTENTION: If CmdLineArgs.java  and its subclasses threw an ParseException, they'll catch it themselves, showHelp(), and write debug output.
+            // so.. do NOTHING in this class (Cmd.java)
+            System.exit(9);
+        } catch (YAMLPath.YAMLPathException ye) {
+            if ( cmdlineargs == null || cmdlineargs.verbose ) ye.printStackTrace(System.err);
+            System.err.println( ye +"\n\nERROR: YAML-Path pattern is invalid.\nCmdline arguments provided are: " + cmdlineargs + "\n" );
             System.exit(8);
-        } catch (java.io.FileNotFoundException e) {
-            if ( cmdlineargs == null || cmdlineargs.verbose ) e.printStackTrace(System.err);
-            System.err.println( "INPUT-File Not found: '" + cmdlineargs.inputFilePath + "'\nCmdline arguments provided are: " + cmdlineargs + "\n"+ e );
+        } catch (java.io.FileNotFoundException fnfe) {
+            if ( cmdlineargs == null || cmdlineargs.verbose ) fnfe.printStackTrace(System.err);
+            System.err.println( fnfe + "\n\nERROR: INPUT-File Not found: '" + cmdlineargs.inputFilePath + "'\nFYI: Cmdline arguments provided are: " + cmdlineargs + "\n" );
             System.exit(8);
-        } catch (java.io.IOException e) {
-            if ( cmdlineargs == null || cmdlineargs.verbose ) e.printStackTrace(System.err);
-            System.err.println( "OUTPUT-File Not found: '" + cmdlineargs.outputFilePath + "'\nCmdline arguments provided are: " + cmdlineargs + "\nn"+ e );
+        } catch (java.io.IOException ioe) {
+            if ( cmdlineargs == null || cmdlineargs.verbose ) ioe.printStackTrace(System.err);
+            System.err.println( ioe +"\n\nERROR: OUTPUT-File Not found: '" + cmdlineargs.outputFilePath + "'\nFYI: Cmdline arguments provided are: " + cmdlineargs + "\n" );
             System.exit(7);
         } catch (Exception e) {
             if ( cmdlineargs == null || cmdlineargs.verbose ) e.printStackTrace(System.err);
-            System.err.println( "Internal error: '" + cmdlineargs.outputFilePath + "'\nCmdline arguments provided are: " + cmdlineargs + "\n"+ e );
+            System.err.println( e +"\n\nERROR: Internal error: '" + cmdlineargs.outputFilePath + "'\nFYI: Cmdline arguments provided are: " + cmdlineargs + "\n" );
             System.exit(6);
         }
 
