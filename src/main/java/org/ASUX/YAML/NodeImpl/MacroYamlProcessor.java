@@ -34,6 +34,7 @@ package org.ASUX.YAML.NodeImpl;
 
 import org.ASUX.yaml.YAMLPath;
 
+import java.util.LinkedHashMap;
 import java.util.Properties;
 
 import java.util.regex.*;
@@ -97,28 +98,45 @@ public class MacroYamlProcessor {
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+    private static final String macroEval( final boolean _verbose, final String _s,
+                                    final Properties _props, final LinkedHashMap<String,Properties> _allProps )
+                                    throws Exception
+    {
+        final String HDR = CLASSNAME + ": macroEval("+_s+"): ";
+        final String v1 = org.ASUX.common.Macros.eval( _verbose, _s, _props );
+        if ( _verbose ) System.out.println( HDR +" lookup #1 on Properties = ["+ v1 + "]" );
+        final String v2 = org.ASUX.common.Macros.eval( _verbose, v1, _allProps );
+        if ( _verbose ) System.out.println( HDR +" lookup #2 for LinkedHashMap<String,Properties> = ["+ v2 + "]" );
+        return v2;
+    }
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
     // *  @param _output Pass in a new 'empty' org.yaml.snakeyaml.nodes.Node.  THis is what this function *RETURNS* after Macros are evalated within _input
     /** <p>This is a RECURSIVE-FUNCTION.  Make sure to pass in the right parameters.</p>
      *  <p>Note: this function expects you to pass in an empty org.yaml.snakeyaml.nodes.Node as the 2nd parameter.  It will be 'filled' when function returns.</p>
      *  <p>This function returns true, if ANY occurance of ${ASUX::__} was detected and evaluated. If false, _input and _outMap will be identical when function returns</p>
      *  @param _input A org.yaml.snakeyaml.nodes.Node (created by SnakeYAML library) containing the entire Tree representing the YAML file.
      *  @param _props can be null, otherwise an instance of {@link java.util.Properties}
+     *  @param _allProps can be null, otherwise an instance of LinkedHashMap&lt;String,Properties&gt;
      *  @return true = whether at least one match of ${ASUX::} happened.
-	 *  @throws MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within org.ASUX.yaml.Macros.eval() functions
+	 *  @throws MacroYamlProcessor.MacroException - thrown if any attempt to evaluate MACROs fails within org.ASUX.common.Macros.eval() functions
 	 *  @throws Exception - forany other run time error (especially involving YAML issues)
      */
     public Node recursiveSearch(
             final Node _input,
 			// final Node _output,
-			final Properties _props
-    ) throws MacroYamlProcessor.MacroException, Exception {
-
+            final Properties _props,
+            final LinkedHashMap<String,Properties> _allProps
+    ) throws MacroYamlProcessor.MacroException, Exception
+    {
+        final String HDR = CLASSNAME + ": recursiveSearch(): ";
         // if ( (_input == null) || (_output==null) ) return false;
         if ( _input == null ) return null;
 
         // public enum org.yaml.snakeyaml.nodes.NodeId = scalar, sequence, mapping, anchor
         final NodeId nid = _input.getNodeId(); // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/nodes/NodeId.java
-        if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): @top, node-id = ["+ nid + "]" );
+        if ( this.verbose ) System.out.println( HDR +" @top, node-id = ["+ nid + "]" );
 
         //--------------------------
         if ( _input instanceof MappingNode ) {
@@ -127,17 +145,17 @@ public class MacroYamlProcessor {
 			final java.util.List<NodeTuple> tuples = mapNode.getValue();
 			final java.util.List<NodeTuple> newtuples = new java.util.LinkedList<NodeTuple>();
 
-			if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): Mapping-node has value/tuples= ["+ tuples + "]" );
+			if ( this.verbose ) System.out.println( HDR +" Mapping-node has value/tuples= ["+ tuples + "]" );
 
             for( NodeTuple kv: tuples ) {
                 final Node key = kv.getKeyNode();
                 assert ( key.getNodeId() == NodeId.scalar ); // if assert fails, what scenario does that represent?
                 final ScalarNode scalarKey = (ScalarNode) key;
                 final String keytag = scalarKey.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
-                if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): found LHS, keyTag & RHS = ["+ key + "] !"+ keytag + " : "+ kv.getValueNode() + " ;" );
+                if ( this.verbose ) System.out.println( HDR +" found LHS, keyTag & RHS = ["+ key + "] !"+ keytag + " : "+ kv.getValueNode() + " ;" );
 
-				final String keyNM = org.ASUX.yaml.Macros.eval( this.verbose, scalarKey.getValue(), _props );
-				final String keytagNM = org.ASUX.yaml.Macros.eval( this.verbose, keytag, _props );
+				final String keyNM = macroEval( this.verbose, scalarKey.getValue(), _props, _allProps );
+				final String keytagNM = macroEval( this.verbose, keytag, _props, _allProps );
 				assert( keyNM != null );
 				final ScalarNode newkeynode = new ScalarNode( new Tag(keytagNM), keyNM, scalarKey.getStartMark(), scalarKey.getEndMark(), scalarKey.getScalarStyle() );
 				// ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
@@ -146,71 +164,71 @@ public class MacroYamlProcessor {
 
                 if ( valNode.getNodeId() == NodeId.scalar) {
                     final ScalarNode scalarVal = (ScalarNode) valNode;
-					final String valNM = org.ASUX.yaml.Macros.eval( this.verbose, scalarVal.getValue(), _props );
+					final String valNM = macroEval( this.verbose, scalarVal.getValue(), _props, _allProps );
 					final String valtag = scalarVal.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
-					final String valtagNM = org.ASUX.yaml.Macros.eval( this.verbose, valtag, _props );
+					final String valtagNM = macroEval( this.verbose, valtag, _props, _allProps );
 					final ScalarNode newvalnode = new ScalarNode( new Tag(valtagNM), valNM, scalarVal.getStartMark(), scalarVal.getEndMark(), scalarVal.getScalarStyle() );
 					// ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
                     // String v = (scalarVal.getTag().startsWith("!")) ? (scalarVal.getTag()+" ") : "";
 					// v += scalarVal.getValue();
 					final NodeTuple newtuple = new NodeTuple( newkeynode, newvalnode );
                     newtuples.add( newtuple );
-                    if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): >>>>>>>>>>> ADDED SCALAR KV-pair= "+ newtuple + " " );
+                    if ( this.verbose ) System.out.println( HDR +" >>>>>>>>>>> ADDED SCALAR KV-pair= "+ newtuple + " " );
 
                 } else {
-                    if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): recursing.. ..= ["+ valNode.getNodeId() + "]" );
-					final NodeTuple newtuple = new NodeTuple( newkeynode, recursiveSearch( valNode, _props ) );
+                    if ( this.verbose ) System.out.println( HDR +" recursing.. ..= ["+ valNode.getNodeId() + "]" );
+					final NodeTuple newtuple = new NodeTuple( newkeynode, recursiveSearch( valNode, _props, _allProps ) );
 					newtuples.add( newtuple );
                 }
             } // for
 			final MappingNode newmap = new MappingNode(  mapNode.getTag(), false, newtuples, mapNode.getStartMark(), mapNode.getEndMark(), mapNode.getFlowStyle() ) ;
             // MappingNode(Tag ignore, boolean resolved, List<NodeTuple> value, Mark startMark, Mark endMark, DumperOptions.FlowStyle flowStyle)
-            if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): function-returning a NEW MappingNODE with Tag="+ newmap.getTag() + " replicating-Tag="+ _input.getTag() +" = "+ newmap +" " );
+            if ( this.verbose ) System.out.println( HDR +" function-returning a NEW MappingNODE with Tag="+ newmap.getTag() + " replicating-Tag="+ _input.getTag() +" = "+ newmap +" " );
             return newmap;
 
         } else if ( _input instanceof SequenceNode ) {
             // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/nodes/SequenceNode.java
             final SequenceNode seqNode = (SequenceNode) _input;
-            if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): SEQUENCE-node-id = ["+ seqNode.getNodeId() + "]" );
+            if ( this.verbose ) System.out.println( HDR +" SEQUENCE-node-id = ["+ seqNode.getNodeId() + "]" );
 
             final java.util.List<Node> seqs = seqNode.getValue();
 			final java.util.List<Node> newseqs = new java.util.LinkedList<Node>();
             for( Node valNode: seqs ) {
                 if ( valNode.getNodeId() == NodeId.scalar) {
                     final ScalarNode scalarVal = (ScalarNode) valNode;
-					final String valNM = org.ASUX.yaml.Macros.eval( this.verbose, scalarVal.getValue(), _props );
+					final String valNM = macroEval( this.verbose, scalarVal.getValue(), _props, _allProps );
 					final String valtag = scalarVal.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
-					final String valtagNM = org.ASUX.yaml.Macros.eval( this.verbose, valtag, _props );
+					final String valtagNM = macroEval( this.verbose, valtag, _props, _allProps );
 					final ScalarNode newvalnode = new ScalarNode( new Tag(valtagNM), valNM, scalarVal.getStartMark(), scalarVal.getEndMark(), scalarVal.getScalarStyle() );
 					// ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
                     // String v = (scalarVal.getTag().getValue().startsWith("!")) ? (scalarVal.getTag().getValue()+" ") : "";
 					// v += scalarVal.getValue();
                     newseqs.add( newvalnode );
-                    if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): >>>>>>>>>>> ADDED SCALAR into Array: "+ newvalnode + " " );
+                    if ( this.verbose ) System.out.println( HDR +" >>>>>>>>>>> ADDED SCALAR into Array: "+ newvalnode + " " );
 
                 } else {
-                    if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): recursing.. ..= ["+ valNode.getNodeId() + "]" );
-					newseqs.add( recursiveSearch( valNode, _props ) );
+                    if ( this.verbose ) System.out.println( HDR +" recursing.. ..= ["+ valNode.getNodeId() + "]" );
+					newseqs.add( recursiveSearch( valNode, _props, _allProps ) );
                 }
             } // for
 			final SequenceNode newseqNode = new SequenceNode(  seqNode.getTag(), false, newseqs, seqNode.getStartMark(), seqNode.getEndMark(), seqNode.getFlowStyle() ) ;
             // SequenceNode(Tag tag, boolean resolved, List<Node> value, Mark startMark, Mark endMark, DumperOptions.FlowStyle flowStyle)
-            if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): function-returning a NEW SequenceNODE with Tag="+ newseqNode.getTag() + " replicating-Tag="+ _input.getTag() +" = "+ newseqNode +" " );
+            if ( this.verbose ) System.out.println( HDR +" function-returning a NEW SequenceNODE with Tag="+ newseqNode.getTag() + " replicating-Tag="+ _input.getTag() +" = "+ newseqNode +" " );
             return newseqNode;
 
         } else if ( _input instanceof ScalarNode ) {
             // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/nodes/ScalarNode.java
             final ScalarNode scalarVal = (ScalarNode) _input;
-            final String valNM = org.ASUX.yaml.Macros.eval( this.verbose, scalarVal.getValue(), _props );
+            final String valNM = macroEval( this.verbose, scalarVal.getValue(), _props, _allProps );
             final String valtag = scalarVal.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
-            final String valtagNM = org.ASUX.yaml.Macros.eval( this.verbose, valtag, _props );
+            final String valtagNM = macroEval( this.verbose, valtag, _props, _allProps );
             final ScalarNode newvalnode = new ScalarNode( new Tag(valtagNM), valNM, scalarVal.getStartMark(), scalarVal.getEndMark(), scalarVal.getScalarStyle() );
             // ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
             // String v = (scalarVal.getTag().startsWith("!")) ? (scalarVal.getTag()+" ") : "";
             // v += scalarVal.getValue();
 
             // boolean scalarVal.isPlain()
-            if ( this.verbose ) System.out.println( CLASSNAME +" recursiveSearch(): >>>>>>>>>>> returning a SCALAR !! = ["+ newvalnode + "]" );
+            if ( this.verbose ) System.out.println( HDR +" >>>>>>>>>>> returning a SCALAR !! = ["+ newvalnode + "]" );
             return newvalnode;
 
         } else {
@@ -230,7 +248,7 @@ public class MacroYamlProcessor {
 		// 	final Object rhsObj = _input.get(keyAsIs);  // otherwise we'll inefficiently be doing _input.get multiple times below.
 
 		// 	final String rhsStr = (rhsObj==null)?"null":rhsObj.toString(); // to make verbose logging code simplified
-        //     if ( this.verbose ) System.out.println ( "\n"+ CLASSNAME +": recursiveSearch(): recursing @ YAML-file-location: "+ key +"/"+ keyAsIs +" = "+ rhsStr.substring(0,rhsStr.length()>181?180:rhsStr.length()) );
+        //     if ( this.verbose ) System.out.println ( "\n"+ HDR +" recursing @ YAML-file-location: "+ key +"/"+ keyAsIs +" = "+ rhsStr.substring(0,rhsStr.length()>181?180:rhsStr.length()) );
 
 		// 	if ( rhsObj == null ) continue; // perhaps the YAML line is simply key-only like..    Key:
 		// 	//--------------------------------------------------------
@@ -240,7 +258,7 @@ public class MacroYamlProcessor {
 		// 		final LinkedHashMap<String,Object> newMap1	= new LinkedHashMap<>(); // create an empty Map
 		// 		@SuppressWarnings("unchecked")
 		// 		final LinkedHashMap<String, Object> rhs	= (LinkedHashMap<String, Object>) rhsObj;
-		// 		bChangesMade = this.recursiveSearch( rhs, newMap1, _props ); // recursion call
+		// 		bChangesMade = this.recursiveSearch( rhs, newMap1, _props, _allProps ); // recursion call
 
 		// 		_output.put( key, newMap1 );
 		// 		// Why am I not simply doing:-       _output.put( key, newMap1 )
@@ -259,13 +277,13 @@ public class MacroYamlProcessor {
 		// 				final LinkedHashMap<String,Object> newMap2 = new LinkedHashMap<>();
 		// 				@SuppressWarnings("unchecked")
 		// 				final LinkedHashMap<String,Object> rhs22 = (LinkedHashMap<String,Object>) o;
-		// 				bChangesMade = this.recursiveSearch( rhs22, newMap2, _props ); // recursion call
+		// 				bChangesMade = this.recursiveSearch( rhs22, newMap2, _props, _allProps ); // recursion call
 		// 				newarr.add( newMap2 );
 		// 			} else if ( o instanceof java.lang.String ) {
 		// 				// by o.toString(), I'm cloning the String object.. .. so both _input and _output do NOT share the same String object
-		// 				newarr.add ( org.ASUX.yaml.Macros.eval( this.verbose, o.toString(), _props ) );
+		// 				newarr.add ( macroEval( this.verbose, o.toString(), _props, _allProps ) );
 		// 			} else {
-		// 				System.err.println( CLASSNAME +": recursiveSearch(): incomplete code #1: failure w Array-type '"+ o.getClass().getName() +"'");
+		// 				System.err.println( HDR +" incomplete code #1: failure w Array-type '"+ o.getClass().getName() +"'");
 		// 				System.exit(92); // This is a serious failure. Shouldn't be happening.
 		// 			} // if-Else   o instanceof LinkedHashMap<String, Object> - (WITHIN FOR-LOOP)
 		// 		} // for Object o: arr
@@ -276,13 +294,13 @@ public class MacroYamlProcessor {
 		// 	} else if ( rhsObj instanceof java.lang.String ) {
 		// 		// by rhsObj.toString(), I'm cloning the String object.. .. so both _input and _output do NOT share the same String object
 		// 		final String asis = rhsObj.toString();
-		// 		final String news = org.ASUX.yaml.Macros.eval( this.verbose, asis, _props);
+		// 		final String news = macroEval( this.verbose, asis, _props, _allProps);
 		// 		if (   !    asis.equals(news) ) this.changesMade ++;
 		// 		_output.put( key, news );
 		// 		// Well: If the key != keyAsIs .. then .. the resulting entry in YAML outputfile is something like '"key"' (that is, a single+double-quote problem)
 
         //     } else {
-		// 		System.err.println( CLASSNAME +": recursiveSearch(): incomplete code #2: failure w Type '"+ ((rhsObj==null)?"null":rhsObj.getClass().getName()) +"'");
+		// 		System.err.println( HDR +" incomplete code #2: failure w Type '"+ ((rhsObj==null)?"null":rhsObj.getClass().getName()) +"'");
 		// 		System.exit(93); // This is a serious failure. Shouldn't be happening.
         //     }// if-else yamlPElemPatt.matcher()
 
