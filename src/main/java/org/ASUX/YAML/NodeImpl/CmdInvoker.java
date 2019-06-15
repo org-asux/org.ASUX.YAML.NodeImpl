@@ -324,7 +324,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             // else continue below.
             final Object content = this.getDataFromReference( claMacro.propertiesFilePath );
             if ( ! (content instanceof Properties) ) {
-                throw new Exception( claMacro.propertiesFilePath +" is Not a java properties file, with the extension '.properties' .. or, it's contents are Not compatible with java.util.Properties" );
+                throw new Exception( claMacro.propertiesFilePath +" is Not a java properties file, with the extension '.properties' .. or, it's contents (of type'"+ content.getClass().getName() +"')are Not compatible with java.util.Properties" );
             }; // else {
                 final Properties properties = (Properties) content;
                 if (claMacro.verbose) System.out.println( HDR +" about to start MACRO command using: [Props file [" + claMacro.propertiesFilePath + "]");
