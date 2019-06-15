@@ -144,8 +144,9 @@ public class Cmd {
 
             //======================================================================
             // run the command requested by user
-            final Object output = cmdinvoker.processCommand( cmdlineargs, inputNode );
-            if (cmdlineargs.verbose) System.out.println( HDR +" processing of entire command returned [" + (output==null?"null":output.getClass().getName()) + "]" );
+            final Object outputAsIs = cmdinvoker.processCommand( cmdlineargs, inputNode );
+            final Object output = (outputAsIs != null) ? outputAsIs : NodeTools.getEmptyYAML( GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter() );
+            if (cmdlineargs.verbose) System.out.println( HDR +" processing of entire command returned [" + (output.getClass().getName()) + "]" );
 
             //======================================================================
             final java.io.Writer javawriter = ( cmdlineargs.outputFilePath.equals("-") )
