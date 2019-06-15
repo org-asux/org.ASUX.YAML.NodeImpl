@@ -150,7 +150,7 @@ public class InputsOutputs {
                 if ( _verbose ) System.out.println( HDR +" YAML loaded into tempOutputMap =" + output );
                 return output;
 
-            } else if ( srcFile.endsWith(".properties") ) {
+            } else if ( srcFile.endsWith(".properties") || srcFile.endsWith(".txt") ) {
                 final Properties properties = new Properties();
                 properties.load( fs );
                 return properties;
@@ -159,8 +159,9 @@ public class InputsOutputs {
                 return new Properties(); // an empty Properties file.  /dev/null ==> by definition, we CANNOT TELL if its JSON or YAML.  So, Properties it is!
 
             } else {
-                if ( _verbose ) System.out.println( HDR +" detecting NEITHER a JSON NOR A YAML file provided via '@'." );
-                return null;
+                final String emsg = "Found NEITHER a JSON NOR A YAML (nor a java.util.Properties) file. You provided the file-name: "+ _src;
+                System.err.println( "ERROR:\t"+ HDR +emsg );
+                throw new Exception( emsg );
             }
 
         } else if ( _src.startsWith("!") ) {
@@ -168,11 +169,11 @@ public class InputsOutputs {
             final String savedMapName = _src.startsWith("!") ?  _src.substring(1) : _src;
             // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
             final Object recalledContent = (_memoryAndContext != null) ?  _memoryAndContext.getDataFromMemory( savedMapName ) : null;
-            if (_verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): Memory returned =" + ((recalledContent==null)?"null":recalledContent.toString()) );
+            if (_verbose) System.out.println( HDR +"Memory returned =" + ((recalledContent==null)?"null":recalledContent.toString()) );
             return recalledContent;
 
         } else {
-            if ( _verbose ) System.out.println( HDR +" Must be an inline String.  Let me see if it's inline-JSON or inline-YAML." );
+            if ( _verbose ) System.out.println( HDR +"Must be an inline String.  Let me see if it's inline-JSON or inline-YAML." );
             try{
                 // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
                 // and less likely to see a YAML string inline
@@ -180,25 +181,34 @@ public class InputsOutputs {
 
             } catch( Exception e ) {
                 if (_verbose) e.printStackTrace( System.out );
-                if (_verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): FAILED-attempted to PARSE as JSON for [" + _src +"]" );
+                if (_verbose) System.out.println( HDR +"FAILED-attempted to PARSE as JSON for [" + _src +"]" );
                 try {
-                    // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
-                    // and less likely to see a YAML string inline
-                    Node newnode = NodeTools.YAMLString2Node( _src );
-                    if ( _verbose ) System.out.println( HDR +" new Node="+ newnode );
-                    if ( newnode instanceof ScalarNode ) {
-                        // THen.. rebuild the ScalanNode with the right DumperOptions
-                        final ScalarNode sn = (ScalarNode) newnode;
-                        newnode = new ScalarNode( Tag.STR, sn.getValue(), null, null, _dumperopt.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
-                    }
-                    return newnode;
+                    // because SnakeYAML Library will read 'key=value' as a simple ScalarNode (that is, no errors, success).. we need to check if inline-string is KV-pairs first.
+                    final Properties props = org.ASUX.common.Utils.parseProperties( _src );
+                    if ( _verbose ) System.out.println( HDR +"props="+ props );
+                    if ( _verbose && props != null ) props.list(System.err);
+                    return props;
                 } catch(Exception e2) {
-                    if (_verbose) e.printStackTrace( System.out );
-                    if (_verbose) System.out.println( CLASSNAME +": getDataFromReference("+ _src +"): FAILED-attempted to PARSE as YAML for [" + _src +"] also!  So.. treating it as a SCALAR string." );
-                    return _src; // The user provided a !!!SCALAR!!! java.lang.String directly - to be used AS-IS
-                    // final ScalarNode newnode = new ScalarNode( Tag.STR, _src, null, null, _dumperopt.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
-                    // if ( _verbose ) System.out.println( HDR +" new ScalarNode="+ newnode );
-                    // return newnode;
+                    if (_verbose) e2.printStackTrace( System.out );
+                    try {
+                        // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
+                        // and less likely to see a YAML string inline
+                        Node newnode = NodeTools.YAMLString2Node( _src );
+                        if ( _verbose ) System.out.println( HDR +" new Node="+ newnode );
+                        if ( newnode instanceof ScalarNode ) {
+                            // THen.. rebuild the ScalanNode with the right DumperOptions
+                            final ScalarNode sn = (ScalarNode) newnode;
+                            newnode = new ScalarNode( Tag.STR, sn.getValue(), null, null, _dumperopt.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
+                        }
+                        return newnode;
+                    } catch(Exception e3) {
+                        if (_verbose) e3.printStackTrace( System.out );
+                        if (_verbose) System.out.println( HDR +"FAILED-attempted to PARSE as YAML for [" + _src +"] also!  So.. treating it as a SCALAR string." );
+                        return _src; // The user provided a !!!SCALAR!!! java.lang.String directly - to be used AS-IS
+                        // final ScalarNode newnode = new ScalarNode( Tag.STR, _src, null, null, _dumperopt.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
+                        // if ( _verbose ) System.out.println( HDR +" new ScalarNode="+ newnode );
+                        // return newnode;
+                    }
                 }
             } // outer-try-catch
         } // if-else startsWith("@")("!")
