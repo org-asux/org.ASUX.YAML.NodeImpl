@@ -116,7 +116,7 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
      */
     @Override
     protected String toStringDebug( Object _o ) throws Exception
-    {   assertTrue ( _o instanceof Node );
+    {   assertTrue ( _o == null || _o instanceof Node );
         @SuppressWarnings("unchecked")
         final Node node = (Node) _o;
         return  NodeTools.Node2YAMLString( node );
@@ -173,6 +173,8 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
     protected Node processBatch( final boolean _bInRecursion, final BatchFileGrammer _batchCmds, final Node _input )
                         throws BatchFileException, java.io.FileNotFoundException, Exception
     {
+        assertTrue( _batchCmds != null );
+        assertTrue( _input != null );
         final String HDR = CLASSNAME +": processBatch(recursion="+ _bInRecursion +","+ _batchCmds.getCmdType().toString() +"): ";
         Node inputNode = null;
 
@@ -188,13 +190,10 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
             inputNode = scaN;
         // } else if ( _input instanceof String ) {
         //     // WARNING: THIS IS NOT NEGOTIABLE .. I do NOT (can NOT) have an Input-Map (non-Scalar) as parameter !!!!!!!!!!!!!!!!!!!!!
-        //     // so, we start off this function with an EMPTY 'inputNode'
-        //     inputNode = NodeTools.getEmptyYAML( this.dumperoptions );
         } else {
             throw new BatchFileException( HDR +"INTERNAL ERROR: _input is Neither Map nor String:  while processing "+ _batchCmds.getState() +" .. unknown object of type ["+ _input.getClass().getName() +"]" );
         }
 
-        assertTrue( inputNode != null );
         return super.processBatch( _bInRecursion, _batchCmds, inputNode );
     }
 
@@ -217,11 +216,14 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
                 throws BatchCmdProcessor.BatchFileException, Macros.MacroException, java.io.FileNotFoundException, java.io.IOException, Exception
     {
         final String HDR = CLASSNAME +": processFOREACHCmd_Step1(): ";
-        if ( _node == null )
-            return NodeTools.getEmptyYAML( this.dumperoptions );
+        assertTrue( _batchCmds != null );
+        assertTrue( _node != null );
+        // if ( _node == null ) return NodeTools.getEmptyYAML( this.dumperoptions );
 
+        //-----------------------------------------
         if ( this.verbose ) System.out.println( HDR +" BEFORE STARTING SWITCH-stmt.. re: "+ _batchCmds.getState() +" object of type ["+ _node.getClass().getName() +"] = "+ _node.getNodeId() );
 
+        //-----------------------------------------
         switch( _node.getNodeId() ) {
             case scalar:
                 throw new BatchFileException( " ERROR while processing "+ _batchCmds.getState() +" .. executing a FOREACH-command with just a SINGLE STRING scalar value -- as output from previous command - does Not make AMY sense!" );
@@ -230,21 +232,20 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
             case sequence:
                 final SequenceNode seqN = (SequenceNode) _node;
                 final java.util.List<Node> arr = seqN.getValue();
-                /* return */ processFOREACH_Step2( BatchFileGrammer.deepClone(_batchCmds), arr );
+                /* return */ processFOREACH_Step2( _batchCmds, arr ); // ignore the return value 
                 break;
             case mapping:
                 // throw new BatchFileException( " ERROR while processing "+ _batchCmds.getState() +" .. executing a FOREACH-command over a LinkedHashMap's contents, which contains arbitrary Nested Map-structure does Not make AMY sense!" );
                 final MappingNode map = (MappingNode) _node;
                 final java.util.List<NodeTuple> tuples = map.getValue();
-                final Node outpMap1 = this.processFOREACH_Step2( BatchFileGrammer.deepClone(_batchCmds), tuples );
-                // return outpMap1;
+                /* final Node outpMap1 = */ this.processFOREACH_Step2( _batchCmds, tuples ); // ignore the return value
                 break;
             default:
                 throw new BatchFileException( " ERROR while processing "+ _batchCmds.getState() +" .. unknown object of Node-type="+ _node.getNodeId() +" className="+ _node.getClass().getName() +" ");
         } // switch
 
+        //-----------------------------------------
         // ignore the output of processFOREACH_Step2()
-
         return _node; // the __SET__ of commands encapsulated between FOREACH-and-END (inclusive of FOREACH & END) must ___literally___ pass-thru whatever was the YAML-input, that the FOR-command enountered.
     }
 
@@ -253,16 +254,19 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
                 throws BatchCmdProcessor.BatchFileException, Macros.MacroException, java.io.FileNotFoundException, java.io.IOException, Exception
     {
         final String HDR = CLASSNAME +": processFOREACH_Step2(): ";
+        assertTrue( _batchCmds != null );
+        assertTrue( coll != null );
+
         Node tempOutput = NodeTools.getEmptyYAML( this.dumperoptions );
 
         //-----------------------------------------
-        final Properties forLoopProps = this.allProps.get( BatchFileGrammer.FOREACH_PROPERTIES );
+        final Properties forLoopProps = super.allProps.get( FOREACH_PROPERTIES );
         final String prevForLoopIndex = forLoopProps.getProperty( FOREACH_INDEX );
         final String prevForLoopIndexPlus1 = forLoopProps.getProperty( FOREACH_INDEX_PLUS1 );
         final String prevForLoopIterKey = forLoopProps.getProperty( FOREACH_ITER_KEY );
         final String prevForLoopIterValue = forLoopProps.getProperty( FOREACH_ITER_VALUE );
 
-        //-----------------------------------------
+        //----------------------------------------------------------------------------------------------------------------------
         java.util.Iterator<?> itr = coll.iterator();
         for ( int ix=0;  itr.hasNext(); ix ++ ) {
             final Object o = itr.next();
@@ -272,6 +276,7 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
 
             if ( this.verbose ) System.out.println( HDR +" @@@@@@@@@@@@@@@@@ foreach/Array-index #"+ ix +" : Object's type ="+ o.getClass().getName() +" and it's toString()=["+ o.toString() +"]" );
 
+            //----------------------------------------------------------------------------------------------------------------------
             if ( o instanceof ScalarNode ) {
                 final ScalarNode scalarN = (ScalarNode) o;
                 if ( this.verbose ) System.out.println( HDR +" itr.next() is of ScalarNode type="+ scalarN  );
@@ -279,9 +284,16 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
                 forLoopProps.setProperty( FOREACH_ITER_KEY, scalarN.getValue() ); // to be used by all commands INSIDE the 'foreach' block-inside-batchfile
                 forLoopProps.setProperty( FOREACH_ITER_VALUE, scalarN.getValue() );
 
-                final Node retMap6 = this.processBatch( true, BatchFileGrammer.deepClone(_batchCmds), scalarN ); // kind of a recursion (for all commands between a 'foreach' and the matching 'end')
+                //----------------------------
+                // !!!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!!
+                // Warning: Do NOT call .hasNextLine() on either _batchCmds or it's clone UNTIL.. .. FOREACH_INDEX, FOREACH_ITER_KEY, FOREACH_ITER_VALUE are set above!!
+                // Otherwise.. any commands that utilize them WILL END NOT getting macro-evaluated AT ALL!
+                final BatchFileGrammer clone = BatchFileGrammer.deepClone( _batchCmds );
+
+                final Node retMap6 = this.processBatch( true, clone, scalarN ); // kind of a recursion (for all commands between a 'foreach' and the matching 'end')
                 tempOutput = retMap6;
 
+            //----------------------------------------------------------------------------------------------------------------------
             } else if ( o instanceof NodeTuple) {
                 final NodeTuple tuple = (NodeTuple) o;
                 if ( this.verbose ) System.out.println( HDR +" itr.next() is of NodeTuple type"+ tuple );
@@ -292,9 +304,16 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
                 forLoopProps.setProperty( FOREACH_ITER_KEY, scalarKeyN.getValue() ); // to be used by all commands INSIDE the 'foreach' block-inside-batchfile
                 forLoopProps.setProperty( FOREACH_ITER_VALUE, NodeTools.Node2YAMLString( tuple.getValueNode() ) );
 
-                final Node retMap7 = this.processBatch( true, BatchFileGrammer.deepClone(_batchCmds), tuple.getValueNode() ); // kind of a recursion (for all commands between a 'foreach' and the matching 'end')
+                //----------------------------
+                // !!!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!!
+                // Warning: Do NOT call .hasNextLine() on either _batchCmds or it's clone UNTIL.. .. FOREACH_INDEX, FOREACH_ITER_KEY, FOREACH_ITER_VALUE are set above!!
+                // Otherwise.. any commands that utilize them WILL END NOT getting macro-evaluated AT ALL!
+                final BatchFileGrammer clone = BatchFileGrammer.deepClone( _batchCmds );
+
+                final Node retMap7 = this.processBatch( true, clone, tuple.getValueNode() ); // kind of a recursion (for all commands between a 'foreach' and the matching 'end')
                 tempOutput = retMap7;
 
+            //----------------------------------------------------------------------------------------------------------------------
             } else if ( o instanceof Node ) {
                 final Node node = (Node) o;
                 if ( this.verbose ) System.out.println( HDR +" itr.next() is of generic-SnakeYamlNode type = "+ node );
@@ -302,9 +321,16 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
                 forLoopProps.setProperty( FOREACH_ITER_KEY, node.toString() ); // to be used by all commands INSIDE the 'foreach' block-inside-batchfile
                 forLoopProps.setProperty( FOREACH_ITER_VALUE, NodeTools.Node2YAMLString( node ) );
 
-                final Node retMap8 = this.processBatch( true, BatchFileGrammer.deepClone(_batchCmds), node ); // kind of a recursion (for all commands between a 'foreach' and the matching 'end')
+                //----------------------------
+                // !!!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!!
+                // Warning: Do NOT call .hasNextLine() on either _batchCmds or it's clone UNTIL.. .. FOREACH_INDEX, FOREACH_ITER_KEY, FOREACH_ITER_VALUE are set above!!
+                // Otherwise.. any commands that utilize them WILL END NOT getting macro-evaluated AT ALL!
+                final BatchFileGrammer clone = BatchFileGrammer.deepClone( _batchCmds );
+
+                final Node retMap8 = this.processBatch( true, clone, node ); // kind of a recursion (for all commands between a 'foreach' and the matching 'end')
                 tempOutput = retMap8;
 
+            //----------------------------------------------------------------------------------------------------------------------
             } else {
                     throw new BatchFileException( HDR +" ERROR: Un-implemented logic.  Not sure what this means: Array of Arrays! In "+ _batchCmds.getState() +" .. trying to iterate over object ["+ o.toString() +"]");
             } // end if-else-if-else
@@ -313,23 +339,24 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
 
         //-----------------------------------------
         if ( prevForLoopIndex != null ) { // if there was an outer FOREACH within the batch file, restore it's index.
-            forLoopProps.setProperty( FOREACH_INDEX, prevForLoopIndex );
-            forLoopProps.setProperty( FOREACH_INDEX_PLUS1, prevForLoopIndexPlus1 );
+                forLoopProps.setProperty( FOREACH_INDEX, prevForLoopIndex );
+                forLoopProps.setProperty( FOREACH_INDEX_PLUS1, prevForLoopIndexPlus1 );
         } else {
-            forLoopProps.remove( FOREACH_INDEX ); // trying NOT to clutter the Properties space (once the iteration of FOREACH command is over)
-            forLoopProps.remove( FOREACH_INDEX_PLUS1 ); // trying NOT to clutter the Properties space (once the iteration of FOREACH command is over)
+                forLoopProps.remove( FOREACH_INDEX ); // trying NOT to clutter the Properties space (once the iteration of FOREACH command is over)
+                forLoopProps.remove( FOREACH_INDEX_PLUS1 ); // trying NOT to clutter the Properties space (once the iteration of FOREACH command is over)
         }
 
         if ( prevForLoopIterKey != null ) // if there was an outer FOREACH within the batch file, restore it's iteration_key.
-            forLoopProps.setProperty( FOREACH_ITER_KEY, prevForLoopIterKey );
+                forLoopProps.setProperty( FOREACH_ITER_KEY, prevForLoopIterKey );
         else
-            forLoopProps.remove( FOREACH_ITER_KEY ); // trying NOT to clutter the Properties space (once the iteration of FOREACH command is over)
+                forLoopProps.remove( FOREACH_ITER_KEY ); // trying NOT to clutter the Properties space (once the iteration of FOREACH command is over)
 
         if ( prevForLoopIterValue != null ) // if there was an outer FOREACH within the batch file, restore it's index.
-            forLoopProps.setProperty( FOREACH_ITER_VALUE, prevForLoopIterValue );
+                forLoopProps.setProperty( FOREACH_ITER_VALUE, prevForLoopIterValue );
         else
-            forLoopProps.remove( FOREACH_ITER_VALUE ); // trying NOT to clutter the Properties space (once the iteration of FOREACH command is over)
+                forLoopProps.remove( FOREACH_ITER_VALUE ); // trying NOT to clutter the Properties space (once the iteration of FOREACH command is over)
 
+        //-----------------
         return tempOutput;
     }
 
