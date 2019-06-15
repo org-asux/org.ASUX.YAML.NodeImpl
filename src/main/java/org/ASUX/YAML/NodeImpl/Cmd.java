@@ -197,19 +197,23 @@ public class Cmd {
             System.exit(9);
         } catch (YAMLPath.YAMLPathException ye) {
             if ( cmdlineargs == null || cmdlineargs.verbose ) ye.printStackTrace(System.err);
-            System.err.println( ye +"\n\nERROR: YAML-Path pattern is invalid.\nCmdline arguments provided are: " + cmdlineargs + "\n" );
+            System.err.println( ye +"\n"+ HDR +"\n\nERROR: YAML-Path pattern is invalid.\nCmdline arguments provided are: " + cmdlineargs + "\n" );
             System.exit(8);
         } catch (java.io.FileNotFoundException fnfe) {
             if ( cmdlineargs == null || cmdlineargs.verbose ) fnfe.printStackTrace(System.err);
-            System.err.println( fnfe + "\n\nERROR: INPUT-File Not found: '" + cmdlineargs.inputFilePath + "'\nFYI: Cmdline arguments provided are: " + cmdlineargs + "\n" );
+            System.err.println( fnfe +"\n"+ HDR +"\n\nERROR: INPUT-File Not found: '" + cmdlineargs.inputFilePath + "'\nFYI: Cmdline arguments provided are: " + cmdlineargs + "\n" );
             System.exit(8);
         } catch (java.io.IOException ioe) {
             if ( cmdlineargs == null || cmdlineargs.verbose ) ioe.printStackTrace(System.err);
-            System.err.println( ioe +"\n\nERROR: OUTPUT-File Not found: '" + cmdlineargs.outputFilePath + "'\nFYI: Cmdline arguments provided are: " + cmdlineargs + "\n" );
+            System.err.println( ioe +"\n"+ HDR +"\n\nERROR: OUTPUT-File Not found: '" + cmdlineargs.outputFilePath + "'\nFYI: Cmdline arguments provided are: " + cmdlineargs + "\n" );
             System.exit(7);
         } catch (Exception e) {
             if ( cmdlineargs == null || cmdlineargs.verbose ) e.printStackTrace(System.err);
-            System.err.println( e +"\n\nERROR: Internal error: '" + cmdlineargs.outputFilePath + "'\nFYI: Cmdline arguments provided are: " + cmdlineargs + "\n" );
+            System.err.println( e +"\n"+ HDR +"\n\nINTERNAL ERROR!\tFYI: Cmdline arguments provided are: " + cmdlineargs + "\n" );
+            System.exit(6);
+        } catch (Throwable t) {
+            t.printStackTrace(System.err); // main() unit-testing
+            System.err.println( t +"\n"+ HDR +"\n\nINTERNAL ERROR!\tFYI: Cmdline arguments provided are: " + cmdlineargs + "\n" );
             System.exit(6);
         }
 
