@@ -127,15 +127,24 @@ public class InputsOutputs {
         if ( _verbose ) System.out.println( HDR +" inline String is NOT empty. checking whether its JSON or YAML or a simple plain string." );
 
         if ( _src.startsWith("@") ) {
-            final String srcFile = _src.substring(1);
-            final InputStream fs = new FileInputStream( srcFile );
+            final boolean isNoFailCommand = _src.charAt(1) == '?'; // example:  @?./perhaps/nonexistent/file.yaml
+            final String srcFile = _src.substring( isNoFailCommand ? 2 : 1 ); // get rid of the '@' and any optional '?' a the beginning
+            InputStream fs = null;
+            try {
+                fs = new FileInputStream( srcFile );
+            } catch(FileNotFoundException fe) {
+                if ( isNoFailCommand)
+                    return NodeTools.getEmptyYAML( _dumperopt );
+                else
+                    throw fe;
+            }
             if ( srcFile.endsWith(".json") ) {
                 if ( _verbose ) System.out.println( HDR +" detected a JSON-file provided via '@'." );
                 // http://tutorials.jenkov.com/java-json/jackson-objectmapper.html#read-map-from-json-string 
                 com.fasterxml.jackson.databind.ObjectMapper objMapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 objMapper.configure( com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true );
                 objMapper.configure( com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
-                    com.fasterxml.jackson.databind.type.MapType type = objMapper.getTypeFactory().constructMapType( LinkedHashMap.class, String.class, Object.class );
+                final com.fasterxml.jackson.databind.type.MapType type = objMapper.getTypeFactory().constructMapType( LinkedHashMap.class, String.class, Object.class );
                 final LinkedHashMap<String, Object> retMap2 = objMapper.readValue( fs, new com.fasterxml.jackson.core.type.TypeReference< LinkedHashMap<String,Object> >(){}  );
                 fs.close();
                 if ( _verbose ) System.out.println( HDR +" jsonMap loaded BY OBJECTMAPPER into tempOutputMap =" + retMap2 );
@@ -166,9 +175,11 @@ public class InputsOutputs {
 
         } else if ( _src.startsWith("!") ) {
             if ( _verbose ) System.out.println( HDR +" detecting Recall-from-memory via '!'." );
-            final String savedMapName = _src.startsWith("!") ?  _src.substring(1) : _src;
+            final boolean isNoFailCommand = _src.charAt(1) == '?'; // example:  !?perhapsNonexistentLabel
+            final String savedMapLabel = _src.substring( isNoFailCommand ? 2 : 1 ); // get rid of the '!' and any optional '?' a the beginning
             // This can happen only within a BatchYaml-file context.  It only makes any sense (and will only work) within a BatchYaml-file context.
-            final Object recalledContent = (_memoryAndContext != null) ?  _memoryAndContext.getDataFromMemory( savedMapName ) : null;
+            Object recalledContent = (_memoryAndContext != null) ? _memoryAndContext.getDataFromMemory( savedMapLabel ) : null;
+            if ( isNoFailCommand && recalledContent == null ) recalledContent = NodeTools.getEmptyYAML( _dumperopt );
             if (_verbose) System.out.println( HDR +"Memory returned =" + ((recalledContent==null)?"null":recalledContent.toString()) );
             return recalledContent;
 
