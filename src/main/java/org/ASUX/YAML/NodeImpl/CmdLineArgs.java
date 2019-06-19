@@ -57,7 +57,7 @@ public class CmdLineArgs extends org.ASUX.yaml.CmdLineArgs {
 
     /** Constructor.  Do Not use.  It cannot be used, as it's private-scope. This class exists only for the 'create()' static method (see below).
      *  @param args command line argument array - as received as-is from main().
-     *  @param _cmdType enum denoting what the user's command-type was, as entered on the command line (see org.ASUX.yaml.CmdEnum)
+     *  @param _cmdType enum denoting what the user's command-type was, as entered on the command line (see org.ASUX.yaml.Enums.CmdEnum)
      *  @param _shortCmd example "r" "zd"
      *  @param _longCmd example "read" "table"
      *  @param _cmdDesc long description. See org.apache.commons.cli for complex examples.
@@ -65,7 +65,7 @@ public class CmdLineArgs extends org.ASUX.yaml.CmdLineArgs {
      *  @param _addlArgsDesc what the HELP command shows about these additional args
      *  @throws Exception like ClassNotFoundException while trying to serialize and deserialize the input-parameter
      */
-    private CmdLineArgs( final String[] args, final org.ASUX.yaml.CmdEnum _cmdType,
+    private CmdLineArgs( final String[] args, final org.ASUX.yaml.Enums.CmdEnum _cmdType,
                         final String _shortCmd, final String _longCmd, final String _cmdDesc,
                         final int _numArgs, final String _addlArgsDesc  )
                         throws Exception
