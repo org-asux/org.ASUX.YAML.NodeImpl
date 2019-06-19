@@ -187,7 +187,14 @@ public class GenericYAMLWriter {
      * @throws Exception if the YAML libraries have any issues with ERRORs inthe YAML or other issues.
      */
     public void write( final Object _output, final DumperOptions _dumperoptions ) throws Exception
-    {
+    {   final String HDR = CLASSNAME +": write(): ";
+
+        if ( _output == null ) {
+            this.javaWriter.write("null");
+            this.javaWriter.flush();
+            return;
+        }
+
         // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
         switch ( this.getYamlLibrary() ) {
             case NodeImpl_Library:
@@ -196,7 +203,8 @@ public class GenericYAMLWriter {
                 // per https://bitbucket.org/asomov/snakeyaml/src/tip/src/test/java/examples/CustomMapExampleTest.java
                 // See also https://bitbucket.org/asomov/snakeyaml/wiki/Documentation#markdown-header-collections
                 if ( this.snakeYaml != null || this.javaWriter != null ) {
-                    assertTrue( _output instanceof Node );
+                    if ( this.verbose ) System.err.println( HDR +"_output is of type: "+ _output.getClass().getName() );
+                    assertTrue( _output == null || _output instanceof Node || _output instanceof String );
                     @SuppressWarnings("unchecked")
                     final Node _outputNode = (Node) _output;
                     // this.snakeYaml.dump( _output, this.javaWriter );
