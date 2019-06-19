@@ -169,8 +169,19 @@ public class Cmd {
                 case REPLACE:
                 case MACRO:
                 case BATCH:
-                    if (cmdlineargs.verbose) System.out.println( HDR +" final output is of type " + output.getClass().getName() + "]" );
-                    writer.write( output, dumperopts );
+                    Object humanFriendlyOutput = output; // if we have an array of just 1 element, let's dump the element and NOT the array.
+                    if ( output instanceof SequenceNode ) {
+                        final SequenceNode seqnode = (SequenceNode) output;
+                        final java.util.List<Node> seqs = seqnode.getValue();
+                        if ( seqs.size() == 1 ) {  // if it's a single 'item' that we found.. provide the user a more humanly-meaningful format. .. .. just provide that single element/Node.
+                            if ( seqs.get(0) instanceof ScalarNode ) {
+                                humanFriendlyOutput = seqs.get(0);
+                            } // 2nd inner if
+                        } // 1st inner if
+                    } // outermost if
+
+                    if (cmdlineargs.verbose) System.out.println( HDR +" final output is of type " + humanFriendlyOutput.getClass().getName() + "]" );
+                    writer.write( humanFriendlyOutput, dumperopts );
                     break;
             }
 
