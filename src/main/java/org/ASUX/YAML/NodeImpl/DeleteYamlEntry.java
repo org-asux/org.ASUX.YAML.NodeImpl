@@ -49,6 +49,8 @@ import org.yaml.snakeyaml.nodes.SequenceNode;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
+import static org.junit.Assert.*;
+
 
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.YAML.NodeImpl.AbstractYamlEntryProcessor}.</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
@@ -128,7 +130,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
             if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): item["+ tpl.val.getClass().getName() +"]= "+ tpl.val +"  within parentN["+ parentN.getClass().getName() +"]="+ tpl.key +" " );
             // if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): atEndOfInput: parentN="+ tpl.key +": item["+ tpl.val.getClass().getName() +"]= "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
             if ( tpl.val instanceof String && parentN instanceof MappingNode ) {
-                assert( tpl.val instanceof String ); 
+                assertTrue( tpl.val instanceof String ); 
                 final String key2Search = (String) tpl.val;
 
                 final MappingNode mapN = (MappingNode) parentN;
@@ -139,12 +141,12 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
                 for( NodeTuple kv: tuples ) {
                     ix ++;
                     final Node keyN = kv.getKeyNode();
-                    assert( keyN instanceof ScalarNode );
-                    assert( keyN.getNodeId() == NodeId.scalar ); // if assert fails, what scenario does that represent?
+                    assertTrue( keyN instanceof ScalarNode );
+                    assertTrue( keyN.getNodeId() == NodeId.scalar );
                     // @SuppressWarnings("unchecked")
                     final ScalarNode scalarN = (ScalarNode) keyN;
                     final String keyAsStr = scalarN.getValue();
-                    assert( keyAsStr != null );
+                    assertTrue( keyAsStr != null );
                     if ( this.verbose ) System.out.println( CLASSNAME +" atEndOfInput(): found LHS, keyTag & RHS = ["+ keyN + "] !"+ scalarN.getTag().getValue() + " : "+ kv.getValueNode() + " ;" );
                     if ( keyAsStr.equals(key2Search) ) {
                         bFound = true;
@@ -155,7 +157,7 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
                     tuples.remove( ix );
 
             } else if ( tpl.val instanceof Integer && parentN instanceof SequenceNode ) {
-                assert( tpl.val instanceof Integer ); 
+                assertTrue( tpl.val instanceof Integer ); 
                 final Integer ix = (Integer) tpl.val;
 
                 final SequenceNode seqN = (SequenceNode) tpl.key;

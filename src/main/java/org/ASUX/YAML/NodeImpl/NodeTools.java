@@ -246,10 +246,10 @@ public class NodeTools {
         final java.util.List<NodeTuple> tuples = _mapnode.getValue();
         for( NodeTuple kv: tuples ) {
             final Node keyN = kv.getKeyNode();
-            assert( keyN instanceof ScalarNode );
+            assertTrue( keyN instanceof ScalarNode );
             final ScalarNode scalarKeyN = (ScalarNode) keyN;
             final String keyAsStr = scalarKeyN.getValue();
-            assert( keyAsStr != null );
+            assertTrue( keyAsStr != null );
             if ( keyAsStr.equals(_keyStr) )
                 return kv;
             // final Node valN = kv.getValueNode();
@@ -421,8 +421,8 @@ public class NodeTools {
                 final NodeTuple nnt = new NodeTuple( keySN, seqN );
                 nodetuple.add ( nnt );
                 if ( _verbose ) System.out.println( HDR +": added SequenceNode= ["+ seqN +"]" );
-        
-            } else if ( rhs instanceof java.lang.String ) {
+
+            } else if ( (rhs instanceof java.lang.String) || (rhs instanceof java.lang.Number) ) {
                 final ScalarNode valSN = new ScalarNode( Tag.STR,     rhs.toString(),     null, null, _dumperoptions.getDefaultScalarStyle() );
                 final NodeTuple nnt = new NodeTuple( keySN, valSN );
                 nodetuple.add ( nnt );
@@ -472,7 +472,7 @@ public class NodeTools {
             final LinkedHashMap<String, Object> lhm = new LinkedHashMap<String, Object>();
             for( NodeTuple kv: tuples ) {
                 final Node key = kv.getKeyNode();
-                assert ( key.getNodeId() == NodeId.scalar ); // if assert fails, what scenario does that represent?
+                assertTrue( key.getNodeId() == NodeId.scalar ); // if this ass-ert fails, what scenario does that represent?
                 final ScalarNode scalarKey = (ScalarNode) key;
                 String kstr = (scalarKey.getTag().startsWith("!")) ? (scalarKey.getTag()+" ") : "";
                 kstr += scalarKey.getValue();

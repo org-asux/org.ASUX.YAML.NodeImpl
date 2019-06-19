@@ -158,13 +158,13 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
      */
     @Override
     public YAML_Libraries getYamlLibrary() {
-        // why make this check below with assert()?
+        // why make this check below with ass-ert()?
         // Why shouln't users use one library to read YAML and another to write YAML?
         final YAML_Libraries sclib = this.YAMLScanner.getYamlLibrary();
         // String s = sclib.toString();
         // s = (s==null) ? "null" : s;
-        // assert( s.equals( this.YAMLWriter.getYamlLibrary() ) );
-        assert( sclib == this.YAMLWriter.getYamlLibrary() );
+        // assertTrue( s.equals( this.YAMLWriter.getYamlLibrary() ) );
+        assertTrue( sclib == this.YAMLWriter.getYamlLibrary() );
         return sclib;
     }
 
@@ -236,11 +236,11 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
                 throws FileNotFoundException, IOException, Exception,
                 YAMLPath.YAMLPathException
     {
-        assert( _cmdLA instanceof org.ASUX.yaml.CmdLineArgs );
+        assertTrue( _cmdLA instanceof org.ASUX.yaml.CmdLineArgs );
         final org.ASUX.yaml.CmdLineArgs cmdLineArgs = (org.ASUX.yaml.CmdLineArgs) _cmdLA;
         final String HDR = CLASSNAME + ": processCommand("+ cmdLineArgs.cmdType +"): ";
 
-        assert( _inputData instanceof Node );
+        assertTrue( _inputData instanceof Node );
         // why didn't we just make 2nd parameter of this method to be Node?
         // Well. This is ONE YAML-Library implementation (using SnakeYAML).
         // org.ASUX.YAML project has a 2nd YAML-Library Implementation.  Take a look at org.ASUX.yaml.YAML_Libraries
@@ -314,7 +314,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
         case MACRO:
             final CmdLineArgsMacroCmd claMacro = (CmdLineArgsMacroCmd) cmdLineArgs;
             if (claMacro.verbose) System.out.println( HDR +" loading Props file [" + claMacro.propertiesFilePath + "]");
-            assert( claMacro.propertiesFilePath != null );
+            assertTrue( claMacro.propertiesFilePath != null );
 
             MacroYamlProcessor macro = new MacroYamlProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'dumperopt'
             if ( "!AllProperties".equals( claMacro.propertiesFilePath ) ) {

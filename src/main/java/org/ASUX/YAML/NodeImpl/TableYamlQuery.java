@@ -52,6 +52,8 @@ import org.yaml.snakeyaml.nodes.SequenceNode;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
+import static org.junit.Assert.*;
+
 
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class (org.ASUX.yaml.AbstractYamlEntryProcessor).</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
@@ -175,10 +177,10 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
                     INNERFORLOOP:
                     for( NodeTuple kv: tuples ) {
                         final Node keyN = kv.getKeyNode();
-                        assert( keyN instanceof ScalarNode );
+                        assertTrue( keyN instanceof ScalarNode );
                         final ScalarNode scalarKeyN = (ScalarNode) keyN;
                         final String keyAsStr = scalarKeyN.getValue();
-                        assert( keyAsStr != null );
+                        assertTrue( keyAsStr != null );
                         final Node valN = kv.getValueNode();
                         if ( _verbose ) System.out.println( HDR2 +" checking on [LHS] !keyTag : RHS = ["+ keyN + "] !"+ scalarKeyN.getTag().getValue() + " : "+ valN + " ;" );
 

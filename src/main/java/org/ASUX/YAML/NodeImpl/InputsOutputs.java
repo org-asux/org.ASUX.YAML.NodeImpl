@@ -55,6 +55,8 @@ import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
+import static org.junit.Assert.*;
+
 
 /** <p>This class only contains a collection of static methods, to help to read and write to YAML files / JSON files as well as handle inline-JSON (in command line)</p>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
@@ -263,7 +265,7 @@ public class InputsOutputs {
                 @SuppressWarnings("unchecked")
                 final Node topNode = (Node) _input;
                 final org.ASUX.common.Output.Object<?> inputObj = NodeTools.Node2Map( _verbose, topNode ); // Can't use SnakeYaml Nodes.
-                assert( inputObj.getMap() != null );
+                assertTrue( inputObj.getMap() != null );
                 objMapper.writeValue( filewr, inputObj.getMap() ); // objMapper only takes a Collection as input, and CANNOT process SnakeYAML Nodes.
                 filewr.close();
                 // fs.close();

@@ -56,6 +56,8 @@ import org.yaml.snakeyaml.emitter.Emitter;
 import org.yaml.snakeyaml.resolver.Resolver;
 import org.yaml.snakeyaml.serializer.Serializer;
 
+import static org.junit.Assert.*;
+
 
 /** <p>This abstract class was written to re-use code to query/traverse a YAML file.</p>
  *  <p>This org.ASUX.yaml GitHub.com project and the <a href="https://github.com/org-asux/org.ASUX.cmdline">org.ASUX.cmdline</a> GitHub.com projects.</p>
@@ -149,14 +151,14 @@ public class MacroYamlProcessor {
 
             for( NodeTuple kv: tuples ) {
                 final Node key = kv.getKeyNode();
-                assert ( key.getNodeId() == NodeId.scalar ); // if assert fails, what scenario does that represent?
+                assertTrue( key.getNodeId() == NodeId.scalar ); // if ass-ert fails, what scenario does that represent?
                 final ScalarNode scalarKey = (ScalarNode) key;
                 final String keytag = scalarKey.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
                 if ( this.verbose ) System.out.println( HDR +" found LHS, keyTag & RHS = ["+ key + "] !"+ keytag + " : "+ kv.getValueNode() + " ;" );
 
 				final String keyNM = macroEval( this.verbose, scalarKey.getValue(), _props, _allProps );
 				final String keytagNM = macroEval( this.verbose, keytag, _props, _allProps );
-				assert( keyNM != null );
+				assertTrue( keyNM != null );
 				final ScalarNode newkeynode = new ScalarNode( new Tag(keytagNM), keyNM, scalarKey.getStartMark(), scalarKey.getEndMark(), scalarKey.getScalarStyle() );
 				// ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
 

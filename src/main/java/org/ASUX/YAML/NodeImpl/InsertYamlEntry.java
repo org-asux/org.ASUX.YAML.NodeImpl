@@ -52,6 +52,8 @@ import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/error/Mark.java
 import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
+import static org.junit.Assert.*;
+
 
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.YAML.NodeImpl.AbstractYamlEntryProcessor}.</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
@@ -95,7 +97,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
         this.newData2bInserted = _nob;
         if ( this.verbose ) System.out.println(HDR + " _nob="+ _nob );
 
-        assert( _nob instanceof String || _nob instanceof Node );
+        assertTrue( _nob instanceof String || _nob instanceof Node );
     } // function
 
     //==============================================================================
@@ -281,11 +283,11 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                 for( NodeTuple kv: tuples ) {
                     ix ++;
                     final Node keyN = kv.getKeyNode();
-                    assert( keyN instanceof ScalarNode );
-                    assert( keyN.getNodeId() == NodeId.scalar ); // if assert fails, what scenario does that represent?
+                    assertTrue( keyN instanceof ScalarNode );
+                    assertTrue( keyN.getNodeId() == NodeId.scalar );
                     final ScalarNode scalarN = (ScalarNode) keyN;
                     final String keyAsStr = scalarN.getValue();
-                    assert( keyAsStr != null );
+                    assertTrue( keyAsStr != null );
                     if ( this.verbose ) System.out.println( HDR +" found LHS, keyTag & RHS = ["+ keyN + "] !"+ scalarN.getTag().getValue() + " : "+ kv.getValueNode() + " ;" );
 
                     if ( keyAsStr.equals(key2Search) ) {
@@ -302,7 +304,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                         continue OUTERFORLOOP;
                     } // if
                 } // INNER for loop
-                assert( true ); // we should Not be here.  the bFound must be true WITHIN the Inner-For-Loop.
+                assertTrue( true ); // we should Not be here.  'bFound' must be set to 'true' WITHIN the Inner-For-Loop.
                 // Semantically, it makes NO sense that we have an entry in 'this.existingPathsForInsertion' that is NOT in 'mapN'
 
             } else if ( tpl.key instanceof Integer && tpl.val instanceof SequenceNode ) {
@@ -425,7 +427,8 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
             final java.util.List<NodeTuple> tuples = existingMapNode.getValue();
             // since this is all NEW content and even NEW Parent Node-heirarchy.. we'll assume a simple 'ad()' into the tuples List<> object will work without any issues.
             final NodeTuple kv = NodeTools.getNodeTuple( existingMapNode, _lhsKeyStr );
-assert( kv != null );  // if we look up the existingMapNode.. why on earth should this be null?
+
+assertTrue( kv != null );  // if we look up the existingMapNode.. why on earth should this be null?
 
             if ( kv == null ) {
                 // the lowestExistingNode does NOT have a SPECIFIC EXISTING 'lhs: rhs' entry WHERE lhs===_lhsKeyStr

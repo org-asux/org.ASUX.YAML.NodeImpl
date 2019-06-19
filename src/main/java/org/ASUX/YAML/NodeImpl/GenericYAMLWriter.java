@@ -66,6 +66,8 @@ import org.yaml.snakeyaml.emitter.Emitter;
 import org.yaml.snakeyaml.resolver.Resolver;
 import org.yaml.snakeyaml.serializer.Serializer;
 
+import static org.junit.Assert.*;
+
 // DumperOptions.ScalarStyle = DOUBLE_QUOTED('"'), SINGLE_QUOTED('\''), LITERAL('|'), FOLDED('>'), PLAIN(null);
 // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
@@ -194,7 +196,7 @@ public class GenericYAMLWriter {
                 // per https://bitbucket.org/asomov/snakeyaml/src/tip/src/test/java/examples/CustomMapExampleTest.java
                 // See also https://bitbucket.org/asomov/snakeyaml/wiki/Documentation#markdown-header-collections
                 if ( this.snakeYaml != null || this.javaWriter != null ) {
-                    assert( _output instanceof Node );
+                    assertTrue( _output instanceof Node );
                     @SuppressWarnings("unchecked")
                     final Node _outputNode = (Node) _output;
                     // this.snakeYaml.dump( _output, this.javaWriter );

@@ -265,11 +265,11 @@ public abstract class AbstractYamlEntryProcessor {
 
             for( NodeTuple kv: tuples ) {
                 final Node keyNode = kv.getKeyNode();
-                assert( keyNode instanceof ScalarNode );
+                assertTrue( keyNode instanceof ScalarNode );
                 @SuppressWarnings("unchecked")
                 final ScalarNode scalarKey = (ScalarNode) keyNode;
                 final String keyAsStr = scalarKey.getValue();
-                assert ( keyNode.getNodeId() == NodeId.scalar ); // if assert fails, what scenario does that represent?
+                assertTrue( keyNode.getNodeId() == NodeId.scalar ); // if this ass-ert fails, what scenario does that represent?
                 final String keytag = scalarKey.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
 
                 final Node valNode = kv.getValueNode();
@@ -299,7 +299,7 @@ public abstract class AbstractYamlEntryProcessor {
                     _end2EndPaths.add( keyAsStr ); // _end2EndPaths keeps the breadcrumbs
 
                     //------------------------------------------------------
-                    assert (_yamlPath.hasNext()); // why on earth would this assertion fail - see checks @ top of function.
+                    assertTrue(_yamlPath.hasNext()); // why on earth would this ass-ertion fail - see checks @ top of function.
 
                     final YAMLPath lookForwardYAMLPath = YAMLPath.deepClone(_yamlPath); // to keep _yamlPath intact as we recurse in & out of sub-yaml-elements
                     if (  hasThisYamlLineLiterallyMatched ||  !  _yamlPath.hasWildcardPrefix() )
@@ -420,7 +420,7 @@ public abstract class AbstractYamlEntryProcessor {
 
         } else if ( _node.getNodeId() == NodeId.sequence && _node instanceof SequenceNode ) {
 
-            assert (_yamlPath.hasNext()); // why on earth would this assertion fail - see checks @ top of function.
+            assertTrue(_yamlPath.hasNext()); // why on earth would this ass-ertion fail - see checks @ top of function.
 
             final YAMLPath lookForwardYAMLPath = YAMLPath.deepClone(_yamlPath); // to keep _yamlPath intact as we recurse in & out of sub-yaml-elements
 
