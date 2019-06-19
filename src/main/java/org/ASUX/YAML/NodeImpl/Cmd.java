@@ -138,6 +138,7 @@ public class Cmd {
                 case REPLACE:
                 case TABLE:
                 case MACRO:
+                case MACROYAML:
                 case BATCH:
                     break; // do nothing for now.
             }
@@ -168,6 +169,7 @@ public class Cmd {
                 case INSERT:
                 case REPLACE:
                 case MACRO:
+                case MACROYAML:
                 case BATCH:
                     Object humanFriendlyOutput = output; // if we have an array of just 1 element, let's dump the element and NOT the array.
                     if ( output instanceof SequenceNode ) {
