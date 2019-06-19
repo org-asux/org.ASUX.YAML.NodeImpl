@@ -305,11 +305,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
      * @return the output as an LinkedList of objects (either Strings or java.util.LinkedHashMap&lt;String, Object&gt; objects).  This is because the 'rhs' of an 
      */
     public Node getOutput() {
-        final java.util.List<Node> seqs = this.outputAsNode.getValue();
-        if ( seqs.size() == 1 ) // if it's a single 'item' that we found.. provide the user a more humanly-meaningful format. .. .. just provide that single element/Node.
-            return seqs.get(0);
-        else
-            return this.outputAsNode;
+        return this.outputAsNode;
     }
 
     //=================================================================================

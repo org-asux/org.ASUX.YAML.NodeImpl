@@ -141,11 +141,7 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
      * @return the output as an Node/YAML of content (either Strings or sub-Node).  This is because the 'rhs' of a YAML-line can be either of the two
      */
     public Node getOutput() {
-        final java.util.List<Node> seqs = this.output.getValue();
-        if ( seqs.size() == 1 ) // if it's a single 'item' that we found.. provide the user a more humanly-meaningful format. .. .. just provide that single element/Node.
-            return seqs.get(0);
-        else
-            return this.output;
+        return this.output;
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
