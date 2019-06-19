@@ -428,8 +428,6 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
             // since this is all NEW content and even NEW Parent Node-heirarchy.. we'll assume a simple 'ad()' into the tuples List<> object will work without any issues.
             final NodeTuple kv = NodeTools.getNodeTuple( existingMapNode, _lhsKeyStr );
 
-assertTrue( kv != null );  // if we look up the existingMapNode.. why on earth should this be null?
-
             if ( kv == null ) {
                 // the lowestExistingNode does NOT have a SPECIFIC EXISTING 'lhs: rhs' entry WHERE lhs===_lhsKeyStr
                 if ( this.verbose ) System.out.println( HDR +" getNodeTuple( existingMapNode, _lhsKeyStr="+ _lhsKeyStr +" ) == null. So.. adding new NodeTuple @ that location to 'tuples'." );
