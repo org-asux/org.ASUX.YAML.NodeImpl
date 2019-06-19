@@ -42,6 +42,7 @@ import org.ASUX.yaml.CmdLineArgsInsertCmd;
 import org.ASUX.yaml.CmdLineArgsMacroCmd;
 import org.ASUX.yaml.CmdLineArgsReplaceCmd;
 import org.ASUX.yaml.CmdLineArgsTableCmd;
+import org.ASUX.yaml.MacroStringProcessor;
 
 import org.ASUX.common.Output; // needed to convert SnakeYAML' YAML Nodes into JSON's LinkedHashMap
 
@@ -311,27 +312,6 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             final Node output5 = replcmd.getOutput();
             return output5;
 
-        case MACRO:
-            final CmdLineArgsMacroCmd claMacro = (CmdLineArgsMacroCmd) cmdLineArgs;
-            if (claMacro.verbose) System.out.println( HDR +" loading Props file [" + claMacro.propertiesFilePath + "]");
-            assertTrue( claMacro.propertiesFilePath != null );
-
-            MacroYamlProcessor macro = new MacroYamlProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'dumperopt'
-            if ( "!AllProperties".equals( claMacro.propertiesFilePath ) ) {
-                final Node outpData = macro.recursiveSearch( _inputNode, null, this.memoryAndContext.getAllPropsRef() );
-                return outpData; // !!!!!!!!!!!! returns here.
-            }
-            // else continue below.
-            final Object content = this.getDataFromReference( claMacro.propertiesFilePath );
-            if ( ! (content instanceof Properties) ) {
-                throw new Exception( claMacro.propertiesFilePath +" is Not a java properties file, with the extension '.properties' .. or, it's contents (of type'"+ content.getClass().getName() +"')are Not compatible with java.util.Properties" );
-            }; // else {
-                final Properties properties = (Properties) content;
-                if (claMacro.verbose) System.out.println( HDR +" about to start MACRO command using: [Props file [" + claMacro.propertiesFilePath + "]");
-                final Node outpData = macro.recursiveSearch( _inputNode, properties, this.memoryAndContext.getAllPropsRef() );
-                return outpData;
-            // }
-
         case BATCH:
             final CmdLineArgsBatchCmd claBatch = (CmdLineArgsBatchCmd) cmdLineArgs;
             if (claBatch.verbose) System.out.println( HDR +" about to start BATCH command using: BATCH file [" + claBatch.batchFilePath + "]");
@@ -342,6 +322,49 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             final Node outpData2 = batcher.go( claBatch.batchFilePath, _inputNode );
             if ( this.verbose ) System.out.println( HDR +" outpData2 =" + outpData2 +"\n\n");
             return outpData2;
+
+        case MACROYAML:
+        case MACRO:
+            final CmdLineArgsMacroCmd claMacro = (CmdLineArgsMacroCmd) cmdLineArgs;
+            if (claMacro.verbose) System.out.println( HDR +" loading Props file [" + claMacro.propertiesFilePath + "]");
+            assertTrue( claMacro.propertiesFilePath != null );
+
+            MacroYamlProcessor macroYamlPr = null;
+            // MacroStringProcessor macroStrPr = null;
+
+            switch ( cmdLineArgs.cmdType ) {
+                case MACRO:     assertTrue( false ); // we can't get here with '_input' ..  _WITHOUT_ it being a _VALID_ YAML content.   So, so might as well as use 'MacroYamlProcessor'
+                                // macroStrPr = new MacroStringProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'dumperopt'
+                                break;
+                case MACROYAML: macroYamlPr = new MacroYamlProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'dumperopt'
+                                break;
+                default: assertTrue( false ); // should not be here.
+            }
+
+            Properties properties = null;
+            if ( "!AllProperties".equals( claMacro.propertiesFilePath ) ) {
+                // do Nothing.   properties will remain set to 'null'
+            } else {
+                final Object content = this.getDataFromReference( claMacro.propertiesFilePath );
+                if (content instanceof Properties) {
+                    properties = (Properties) content;
+                }else {
+                    throw new Exception( claMacro.propertiesFilePath +" is Not a java properties file, with the extension '.properties' .. or, it's contents (of type'"+ content.getClass().getName() +"')are Not compatible with java.util.Properties" );
+                }
+            }
+
+            if (claMacro.verbose) System.out.println( HDR +" about to start MACRO command using: [Props file [" + claMacro.propertiesFilePath + "]");
+            Node outpData = null;
+            switch ( cmdLineArgs.cmdType ) {
+                case MACRO:     assertTrue( false ); // we can't get here with '_input' ..  _WITHOUT_ it being a _VALID_ YAML content.   So, so might as well as use 'MacroYamlProcessor'
+                                // outpData = macroStrPr.searchNReplace( raw-java.lang.String-from-where??, properties, this.memoryAndContext.getAllPropsRef() );
+                                break;
+                case MACROYAML: outpData = macroYamlPr.recursiveSearch( _inputNode, properties, this.memoryAndContext.getAllPropsRef() );
+                                break;
+                default: assertTrue( false ); // should not be here.
+            }
+
+            return outpData;
 
         default:
             final String es = HDR +" Unimplemented command: " + cmdLineArgs.toString();
