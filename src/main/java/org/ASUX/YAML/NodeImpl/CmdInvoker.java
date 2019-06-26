@@ -114,8 +114,8 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
 
     // private static final String TMP FILE = System.getProperty("java.io.tmpdir") +"/org.ASUX.yaml.STDOUT.txt";
 
-    private transient GenericYAMLScanner YAMLScanner;
-    private transient GenericYAMLWriter YAMLWriter;
+    protected transient GenericYAMLScanner YAMLScanner;
+    protected transient GenericYAMLWriter YAMLWriter;
 
     public transient DumperOptions dumperopt = null;
 
@@ -144,7 +144,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
         init();
     }
 
-    private void init() {
+    protected void init() {
         this.YAMLScanner = new GenericYAMLScanner( this.verbose );
         this.YAMLWriter = new GenericYAMLWriter( this.verbose );
     }
