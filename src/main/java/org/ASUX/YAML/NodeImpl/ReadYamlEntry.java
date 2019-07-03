@@ -140,7 +140,7 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
     /**
      * @return the output as an Node/YAML of content (either Strings or sub-Node).  This is because the 'rhs' of a YAML-line can be either of the two
      */
-    public Node getOutput() {
+    public SequenceNode getOutput() {
         return this.output;
     }
 
