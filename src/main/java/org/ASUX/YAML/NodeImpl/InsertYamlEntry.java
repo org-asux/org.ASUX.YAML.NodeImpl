@@ -107,10 +107,12 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
      */
     @Override
     public void reset() {
-        this.existingPathsForInsertion.clear();
-        this.newPaths2bCreated.clear();
-        this.deepestNewPaths2bCreated.clear();
-        this.output = null;
+        if ( this.existingPathsForInsertion != null ) { // ATTENTION! this method was called from within super.constructor, which case we should completely skip these!
+            this.existingPathsForInsertion.clear();
+            this.newPaths2bCreated.clear();
+            this.deepestNewPaths2bCreated.clear();
+            this.output = null;
+        }
     }
 
     //==============================================================================
