@@ -79,20 +79,29 @@ public class MacroYamlProcessor {
 
 	private int changesMade = 0;
 
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
     /** The only Constructor.
      *  @param _verbose Whether you want deluge of debug-output onto System.out
      *  @param _showStats Whether you want a final summary onto console / System.out
      */
     public MacroYamlProcessor(boolean _verbose, final boolean _showStats) {
 		this.verbose = _verbose;
-		this.showStats = _showStats;
-    }
-    private MacroYamlProcessor(){
-		this.verbose = false;
-		this.showStats = true;
+        this.showStats = _showStats;
+        this.reset();
     }
 
-    //------------------------------------------------------------------------------
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     * In case you'd like to re-use this subclass within other java-code, we absolutely need to reset working instance-variables.
+     */
+    public void reset() {
+        this.changesMade = 0;
+    }
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
     public static class MacroException extends Exception {
         private static final long serialVersionUID = 2L;
         public MacroException(String _s) { super(_s); }
@@ -139,6 +148,8 @@ public class MacroYamlProcessor {
         // public enum org.yaml.snakeyaml.nodes.NodeId = scalar, sequence, mapping, anchor
         final NodeId nid = _input.getNodeId(); // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/nodes/NodeId.java
         if ( this.verbose ) System.out.println( HDR +" @top, node-id = ["+ nid + "]" );
+
+        this.reset();
 
         //--------------------------
         if ( _input instanceof MappingNode ) {
@@ -228,6 +239,7 @@ public class MacroYamlProcessor {
             // ScalarNode(Tag tag, String value, Mark startMark, Mark endMark, DumperOptions.ScalarStyle style)
             // String v = (scalarVal.getTag().startsWith("!")) ? (scalarVal.getTag()+" ") : "";
             // v += scalarVal.getValue();
+            if (   !    scalarVal.getValue().equals(valNM)  ||  ( valtagNM != null &&   !   valtagNM.equals(scalarVal.getTag())   )  ) this.changesMade ++;
 
             // boolean scalarVal.isPlain()
             if ( this.verbose ) System.out.println( HDR +" >>>>>>>>>>> returning a SCALAR !! = ["+ newvalnode + "]" );

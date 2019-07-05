@@ -70,6 +70,15 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
      */
     public ReadYamlEntry( final boolean _verbose, final boolean _showStats, final DumperOptions _d ) {
         super( _verbose, _showStats, _d );
+    }
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     * In case you'd like to re-use this subclass within other java-code, we absolutely need to reset working instance-variables.
+     */
+    @Override
+    public void reset() {
         this.count = 0;
         this.output = new SequenceNode( Tag.SEQ, false, new java.util.LinkedList<Node>(),  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
     }

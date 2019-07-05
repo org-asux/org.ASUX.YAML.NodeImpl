@@ -71,10 +71,20 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
      */
     public ListYamlEntry( final boolean _verbose, final boolean _showStats, final DumperOptions _d, final String _printDelim ) {
         super( _verbose, _showStats, _d );
-        this.count = 0;
-        this.output = new SequenceNode( Tag.SEQ, false, new java.util.LinkedList<Node>(),  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
         this.yamlPatternPRINTDelimiter = _printDelim;
     }
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     * In case you'd like to re-use this subclass within other java-code, we absolutely need to reset working instance-variables.
+     */
+    @Override
+    public void reset() {
+        this.count = 0;
+        this.output = new SequenceNode( Tag.SEQ, false, new java.util.LinkedList<Node>(),  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
+        // this.yamlPatternPRINTDelimiter <-- MUST ONLY be set/reset via Constructor, as it's private-instance-variable
+    }
+
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

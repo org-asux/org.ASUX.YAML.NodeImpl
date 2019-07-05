@@ -73,6 +73,16 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
      */
     public DeleteYamlEntry( final boolean _verbose, final boolean _showStats, final DumperOptions _d ) {
         super( _verbose, _showStats, _d );
+        this.reset();
+    }
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     * In case you'd like to re-use this subclass within other java-code, we absolutely need to reset working instance-variables.
+     */
+    @Override
+    public void reset() {
+        this.keys2bRemoved.clear();
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

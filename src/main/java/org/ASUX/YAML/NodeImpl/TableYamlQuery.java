@@ -95,9 +95,6 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     {
         super( _verbose, _showStats, _d );
         this.delimiter = _delim;
-        this.count = 0;
-        this.output = new LinkedList<>();
-        this.outputAsNode = new SequenceNode( Tag.SEQ, false, new LinkedList<Node>(),  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
 
         // Sanity check of "_delim"
         try {
@@ -129,6 +126,19 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
                 throw new Exception( errMsg );
             }
         }
+    }
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     * In case you'd like to re-use this subclass within other java-code, we absolutely need to reset working instance-variables.
+     */
+    @Override
+    public void reset() {
+        this.count = 0;
+        this.output = new LinkedList<>();
+        this.outputAsNode = new SequenceNode( Tag.SEQ, false, new LinkedList<Node>(),  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
+        // this.tableColumns <-- can ONLY be changed via Constructor, as it's NOT publicly accesible instance-variable, and currently NO setter() exists.
     }
 
     //=================================================================================

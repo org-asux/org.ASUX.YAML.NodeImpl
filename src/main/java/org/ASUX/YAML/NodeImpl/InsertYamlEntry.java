@@ -100,6 +100,19 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
         assertTrue( _nob instanceof String || _nob instanceof Node );
     } // function
 
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     * In case you'd like to re-use this subclass within other java-code, we absolutely need to reset working instance-variables.
+     */
+    @Override
+    public void reset() {
+        this.existingPathsForInsertion.clear();
+        this.newPaths2bCreated.clear();
+        this.deepestNewPaths2bCreated.clear();
+        this.output = null;
+    }
+
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================

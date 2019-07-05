@@ -73,6 +73,17 @@ public class ReplaceYamlEntry extends InsertYamlEntry {
         super( _verbose, _showStats, _d, _r);
     }
 
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     * In case you'd like to re-use this subclass within other java-code, we absolutely need to reset working instance-variables.
+     */
+    @Override
+    public void reset() {
+        super.reset(); // as this class EXTENDS InsertYamlEntry.java
+        // Do Nothing
+    }
+
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
