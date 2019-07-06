@@ -71,18 +71,18 @@ public class ReplaceYamlEntry extends InsertYamlEntry {
      */
     public ReplaceYamlEntry( final boolean _verbose, final boolean _showStats, final DumperOptions _d, Object _r ) throws Exception {
         super( _verbose, _showStats, _d, _r);
+        // this.reset(); InsertYamlEntry/super-class already invokes ths.
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-    /**
-     * In case you'd like to re-use this subclass within other java-code, we absolutely need to reset working instance-variables.
-     */
-    @Override
-    public void reset() {
-        super.reset(); // as this class EXTENDS InsertYamlEntry.java
-        // Do Nothing
-    }
+    // /**
+    //  * In case you'd like to re-use this subclass within other java-code, we absolutely need to reset working instance-variables.
+    //  */
+    // @Override
+    // public void reset() {
+    //     // Do Nothing
+    // }
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
