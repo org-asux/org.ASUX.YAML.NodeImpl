@@ -88,7 +88,6 @@ public abstract class AbstractYamlEntryProcessor {
         this.verbose = _verbose;
         this.showStats = _showStats || _verbose;
         this.dumperoptions = _d;
-        this.reset();
     }
 
     /**
@@ -177,6 +176,7 @@ public abstract class AbstractYamlEntryProcessor {
     public boolean searchYamlForPattern( Node _node, String _yamlPathStr, final String _delim)
                 throws YAMLPath.YAMLPathException, Exception
     {
+        this.reset();
         final LinkedList<String> end2EndPaths = new LinkedList<>();
         this.yp = new YAMLPath( this.verbose, _yamlPathStr, _delim );
         boolean retval = false;
@@ -246,8 +246,6 @@ public abstract class AbstractYamlEntryProcessor {
         if ( (_node==null) || (_yamlPath==null) ) return true; // returning TRUE helps with a cleaner recursion logic
         if (  ! _yamlPath.isValid ) return false;
         if ( ! _yamlPath.hasNext() ) return true; // YAML path has ended.  So, must be a good thing, as we got this far down the YAML-Path
-
-        this.reset(); // In case you'd like to re-use this class or it's subclasses within other java-code, we absolutely need to reset working instance-variables.
 
         //--------------------------
         final String yamlPathElemStr = _yamlPath.get(); // current path-element (a substring of full yamlPath)
