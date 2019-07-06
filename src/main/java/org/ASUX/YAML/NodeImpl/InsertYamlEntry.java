@@ -98,6 +98,8 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
         if ( this.verbose ) System.out.println(HDR + " _nob="+ _nob );
 
         assertTrue( _nob instanceof String || _nob instanceof Node );
+
+        this.reset();
     } // function
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
