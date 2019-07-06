@@ -72,6 +72,7 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
     public ListYamlEntry( final boolean _verbose, final boolean _showStats, final DumperOptions _d, final String _printDelim ) {
         super( _verbose, _showStats, _d );
         this.yamlPatternPRINTDelimiter = _printDelim;
+        this.reset();
     }
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
