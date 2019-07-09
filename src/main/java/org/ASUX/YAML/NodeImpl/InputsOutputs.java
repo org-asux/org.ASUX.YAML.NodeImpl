@@ -32,6 +32,7 @@
 
 package org.ASUX.YAML.NodeImpl;
 
+import org.ASUX.common.StringUtils;
 import org.ASUX.yaml.MemoryAndContext;
 
 import java.io.InputStreamReader;
@@ -206,7 +207,8 @@ public class InputsOutputs {
                     try {
                         // more than likely, we're likely to see a JSON as a string - inline - within the command (or in a batch-file line)
                         // and less likely to see a YAML string inline
-                        Node newnode = NodeTools.YAMLString2Node( _src );
+                        final String multilineStr = StringUtils.convertString2MultiLine( _verbose, _src, _memoryAndContext.getAllPropsRef() );
+                        Node newnode = NodeTools.YAMLString2Node( multilineStr );
                         if ( _verbose ) System.out.println( HDR +" new Node="+ newnode );
                         if ( newnode instanceof ScalarNode ) {
                             // THen.. rebuild the ScalanNode with the right DumperOptions
