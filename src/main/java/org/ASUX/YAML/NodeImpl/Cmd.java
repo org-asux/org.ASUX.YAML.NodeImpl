@@ -161,39 +161,42 @@ public class Cmd {
 
             //======================================================================
             // post-completion of YAML processing
-            switch ( cmdlineargs.cmdType ) {
-                case READ:
-                case LIST:
-                case TABLE:
-                case DELETE:
-                case INSERT:
-                case REPLACE:
-                case MACRO:
-                case MACROYAML:
-                case BATCH:
-                    Object humanFriendlyOutput = output; // if we have an array of just 1 element, let's dump the element and NOT the array.
-                    if ( output instanceof SequenceNode ) {
-                        final SequenceNode seqnode = (SequenceNode) output;
-                        final java.util.List<Node> seqs = seqnode.getValue();
-                        if ( seqs.size() == 1 ) {  // if it's a single 'item' that we found.. provide the user a more humanly-meaningful format. .. .. just provide that single element/Node.
-                            if ( seqs.get(0) instanceof ScalarNode ) {
-                                humanFriendlyOutput = seqs.get(0);
-                            } // 2nd inner if
-                        } // 1st inner if
-                    } // outermost if
+            if ( output != null ) {
+                switch ( cmdlineargs.cmdType ) {
+                    case READ:
+                    case LIST:
+                    case TABLE:
+                    case DELETE:
+                    case INSERT:
+                    case REPLACE:
+                    case MACRO:
+                    case MACROYAML:
+                    case BATCH:
+                        Object humanFriendlyOutput = output; // if we have an array of just 1 element, let's dump the element and NOT the array.
+                        if ( output instanceof SequenceNode ) {
+                            final SequenceNode seqnode = (SequenceNode) output;
+                            final java.util.List<Node> seqs = seqnode.getValue();
+                            if ( seqs.size() == 1 ) {  // if it's a single 'item' that we found.. provide the user a more humanly-meaningful format. .. .. just provide that single element/Node.
+                                if ( seqs.get(0) instanceof ScalarNode ) {
+                                    humanFriendlyOutput = seqs.get(0);
+                                } // 2nd inner if
+                            } // 1st inner if
+                        } // outermost if
 
-                    if (cmdlineargs.verbose) System.out.println( HDR +" final output is of type " + humanFriendlyOutput.getClass().getName() + "]" );
-                    writer.write( humanFriendlyOutput, dumperopts );
-                    break;
-            }
-
+                        if (cmdlineargs.verbose) System.out.println( HDR +" final output is of type " + humanFriendlyOutput.getClass().getName() + "]" );
+                        writer.write( humanFriendlyOutput, dumperopts );
+                        break;
+                } // switch
+            } // if output != null
+    
             //======================================================================
             // cleanup & close-out things.    This will actually do work for DELETE, INSERT, REPLACE and MACRO commands
             if ( cmdlineargs.outputFilePath.equals("-") ) {
                 // if we're writing to STDOUT/System.out ..
-                if (writer != null) writer.close(); // Yes! Even for stdout/System.out .. we need to call close(). This is driven by one the YAML libraries (eso teric soft ware)
+                if ( output == null ) System.out.println("null");
+                if ( writer != null ) writer.close(); // Yes! Even for stdout/System.out .. we need to call close(). This is driven by one the YAML libraries (eso teric soft ware)
             } else {
-                if (writer != null) writer.close(); // close the actual file.
+                if ( writer != null ) writer.close(); // close the actual file.
             }
             stdoutSurrogate.flush();
 
