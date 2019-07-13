@@ -113,8 +113,8 @@ public class Cmd {
             org.ASUX.YAML.NodeImpl.CmdInvoker cmdinvoker = new org.ASUX.YAML.NodeImpl.CmdInvoker( cmdlineargs.verbose, cmdlineargs.showStats );
             if (cmdlineargs.verbose) System.out.println( HDR +"getting started with cmdline args = " + cmdlineargs + " " );
 
-            cmdinvoker.setYamlLibrary( cmdlineargs.YAMLLibrary );
-            if (cmdlineargs.verbose) System.out.println( HDR +" set YAML-Library to [" + cmdlineargs.YAMLLibrary + " and [" + cmdinvoker.getYamlLibrary() + "]" );
+            cmdinvoker.setYamlLibrary( cmdlineargs.getYAMLLibrary() );
+            if (cmdlineargs.verbose) System.out.println( HDR +" set YAML-Library to [" + cmdlineargs.getYAMLLibrary() + " and [" + cmdinvoker.getYamlLibrary() + "]" );
 
             //=============================================================
             // read input, whether it's System.in -or- an actual input-file
