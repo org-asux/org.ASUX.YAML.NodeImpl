@@ -256,7 +256,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
         if ( this.dumperopt == null ) { // this won't be null, if this object was created within BatchCmdProcessor.java
             this.dumperopt = GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter();
         }
-        switch( cmdLineArgs.quoteType ) {
+        switch( cmdLineArgs.getQuoteType() ) {
             case DOUBLE_QUOTED: dumperopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.DOUBLE_QUOTED );  break;
             case SINGLE_QUOTED: dumperopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.SINGLE_QUOTED );  break;
             case LITERAL:       dumperopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.LITERAL );        break;
@@ -315,7 +315,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
         case BATCH:
             final CmdLineArgsBatchCmd claBatch = (CmdLineArgsBatchCmd) cmdLineArgs;
             if (claBatch.verbose) System.out.println( HDR +" about to start BATCH command using: BATCH file [" + claBatch.batchFilePath + "]");
-            final Enums.ScalarStyle quoteStyle = ( claBatch.quoteType == Enums.ScalarStyle.UNDEFINED ) ? Enums.ScalarStyle.PLAIN : claBatch.quoteType;
+            final Enums.ScalarStyle quoteStyle = ( claBatch.getQuoteType() == Enums.ScalarStyle.UNDEFINED ) ? Enums.ScalarStyle.PLAIN : claBatch.getQuoteType();
 
             final BatchCmdProcessor batcher = new BatchCmdProcessor( claBatch.verbose, claBatch.showStats, quoteStyle, dumperopt );
             batcher.setMemoryAndContext( this.memoryAndContext );
