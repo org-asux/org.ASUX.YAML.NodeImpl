@@ -422,7 +422,7 @@ public class NodeTools {
                 nodetuple.add ( nnt );
                 if ( _verbose ) System.out.println( HDR +": added SequenceNode= ["+ seqN +"]" );
 
-            } else if ( (rhs instanceof java.lang.String) || (rhs instanceof java.lang.Number) ) {
+            } else if ( (rhs instanceof java.lang.String) || (rhs instanceof java.lang.Number) || (rhs instanceof java.lang.Boolean) ) {
                 final ScalarNode valSN = new ScalarNode( Tag.STR,     rhs.toString(),     null, null, _dumperoptions.getDefaultScalarStyle() );
                 final NodeTuple nnt = new NodeTuple( keySN, valSN );
                 nodetuple.add ( nnt );
