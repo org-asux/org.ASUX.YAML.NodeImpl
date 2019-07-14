@@ -317,7 +317,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             if (claBatch.verbose) System.out.println( HDR +" about to start BATCH command using: BATCH file [" + claBatch.batchFilePath + "]");
             final Enums.ScalarStyle quoteStyle = ( claBatch.getQuoteType() == Enums.ScalarStyle.UNDEFINED ) ? Enums.ScalarStyle.PLAIN : claBatch.getQuoteType();
 
-            final BatchCmdProcessor batcher = new BatchCmdProcessor( claBatch.verbose, claBatch.showStats, quoteStyle, dumperopt );
+            final BatchCmdProcessor batcher = new BatchCmdProcessor( claBatch.verbose, claBatch.showStats, claBatch.isOffline(), quoteStyle, dumperopt );
             batcher.setMemoryAndContext( this.memoryAndContext );
             final Node outpData2 = batcher.go( claBatch.batchFilePath, _inputNode );
             if ( this.verbose ) System.out.println( HDR +" outpData2 =" + outpData2 +"\n\n");
