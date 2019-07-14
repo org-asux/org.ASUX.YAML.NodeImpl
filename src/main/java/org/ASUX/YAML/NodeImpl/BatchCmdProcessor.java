@@ -86,11 +86,12 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
     /** <p>The only constructor - public/private/protected</p>
      *  @param _verbose Whether you want deluge of debug-output onto System.out.
      *  @param _showStats Whether you want a final summary onto console / System.out
+     *  @param _offline true if we pretent no internet-access is available, and we use 'cached' AWS-SDK responses - if available.
      *  @param _quoteType one the values as defined in {@link org.ASUX.yaml.Enums} Enummeration
      *  @param _d instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
      */
-    public BatchCmdProcessor( final boolean _verbose, final boolean _showStats, final Enums.ScalarStyle _quoteType, final DumperOptions _d ) {
-        super( _verbose, _showStats, _quoteType );
+    public BatchCmdProcessor( final boolean _verbose, final boolean _showStats, final boolean _offline, final Enums.ScalarStyle _quoteType, final DumperOptions _d ) {
+        super( _verbose, _showStats, _offline, _quoteType );
         this.dumperoptions = _d;
     }
 
@@ -367,7 +368,7 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
     // For unit-testing purposes only
     public static void main(String[] args) {
         try {
-            final BatchCmdProcessor o = new BatchCmdProcessor(true, true, Enums.ScalarStyle.PLAIN, GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter() );
+            final BatchCmdProcessor o = new BatchCmdProcessor(true, true, true, Enums.ScalarStyle.PLAIN, GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter() );
             Node inpMap = null;
             Node outpMap = o.go( args[0], inpMap );
         } catch (Exception e) {
