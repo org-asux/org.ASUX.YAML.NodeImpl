@@ -176,10 +176,11 @@ public class Cmd {
                         if ( output instanceof SequenceNode ) {
                             final SequenceNode seqnode = (SequenceNode) output;
                             final java.util.List<Node> seqs = seqnode.getValue();
+                            if (cmdlineargs.verbose) System.out.println( HDR +" Human-friendly output possible.  SequenceNode has "+ seqs.size() +"elements." );
                             if ( seqs.size() == 1 ) {  // if it's a single 'item' that we found.. provide the user a more humanly-meaningful format. .. .. just provide that single element/Node.
-                                if ( seqs.get(0) instanceof ScalarNode ) {
+                                // if ( seqs.get(0) instanceof ScalarNode ) { // we don't care if it's a ScalarNode, MappingNode or SequenceNode
                                     humanFriendlyOutput = seqs.get(0);
-                                } // 2nd inner if
+                                // } // 2nd inner if
                             } // 1st inner if
                         } // outermost if
 
