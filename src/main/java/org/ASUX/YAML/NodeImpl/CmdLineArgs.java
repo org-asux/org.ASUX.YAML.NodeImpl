@@ -56,7 +56,6 @@ public class CmdLineArgs extends org.ASUX.yaml.CmdLineArgs {
     //==============================================================================
 
     /** Constructor.  Do Not use.  It cannot be used, as it's private-scope. This class exists only for the 'create()' static method (see below).
-     *  @param args command line argument array - as received as-is from main().
      *  @param _cmdType enum denoting what the user's command-type was, as entered on the command line (see org.ASUX.yaml.Enums.CmdEnum)
      *  @param _shortCmd example "r" "zd"
      *  @param _longCmd example "read" "table"
@@ -65,12 +64,12 @@ public class CmdLineArgs extends org.ASUX.yaml.CmdLineArgs {
      *  @param _addlArgsDesc what the HELP command shows about these additional args
      *  @throws Exception like ClassNotFoundException while trying to serialize and deserialize the input-parameter
      */
-    private CmdLineArgs( final String[] args, final org.ASUX.yaml.Enums.CmdEnum _cmdType,
+    private CmdLineArgs( final org.ASUX.yaml.Enums.CmdEnum _cmdType,
                         final String _shortCmd, final String _longCmd, final String _cmdDesc,
                         final int _numArgs, final String _addlArgsDesc  )
                         throws Exception
     {
-        super( args, _cmdType, _shortCmd, _longCmd, _cmdDesc, _numArgs, _addlArgsDesc );
+        super( _cmdType, _shortCmd, _longCmd, _cmdDesc, _numArgs, _addlArgsDesc );
     }
 
     //==============================================================================
@@ -92,7 +91,9 @@ public class CmdLineArgs extends org.ASUX.yaml.CmdLineArgs {
         final java.io.StringWriter stdoutSurrogate = new java.io.StringWriter();
 
         try {
-            cmdLineArgsBasic = new org.ASUX.yaml.CmdLineArgsBasic( args );
+            cmdLineArgsBasic = new org.ASUX.yaml.CmdLineArgsBasic();
+            cmdLineArgsBasic.define();
+            cmdLineArgsBasic.parse( args );
             // Until we get past the above statement, we don't know about 'verbose'
             if (cmdLineArgsBasic.verbose) { System.out.print( HDR +" >>>>>>>>>>>>> "); for( String s: args) System.out.print(s);  System.out.println(); }
 
