@@ -342,7 +342,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             }
 
             Properties properties = null;
-            if ( "!AllProperties".equals( claMacro.propertiesFilePath ) ) {
+            if ( "!AllProperties".equals( claMacro.propertiesFilePath ) || (claMacro.propertiesFilePath == null) || "null".equals(claMacro.propertiesFilePath) || (claMacro.propertiesFilePath.trim().length()<=0)  )   {
                 // do Nothing.   properties will remain set to 'null'
             } else {
                 final Object content = this.getDataFromReference( claMacro.propertiesFilePath );
