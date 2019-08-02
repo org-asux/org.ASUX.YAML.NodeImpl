@@ -78,10 +78,10 @@
             <groupId>org.asux</groupId>
             <artifactId>yaml</artifactId>
         </dependency>
+        <!-- JUNIT5 junit5 -->
         <dependency>
-            <!-- scope>test</scope -->
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
         </dependency>
         <!-- https://mvnrepository.com/artifact/commons-cli/commons-cli -->
         <dependency>
