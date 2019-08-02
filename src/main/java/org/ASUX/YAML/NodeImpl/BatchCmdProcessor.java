@@ -133,6 +133,16 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
     }
 
     /**
+     *  If any of the Read/List/Replace/Table/Batch commands returned "Empty YAML" (assuming the code retured {@link #getEmptyYAML()}), this is your SIMPLEST way of checking if the YAML is empty.
+     *  @param _n Nullable value
+     *  @return true if the YAML is empty (specifically, if it is the same as what's returned by {@link #getEmptyYAML()})
+     */
+    @Override
+    protected boolean isEmptyYAML( final Node _n ) {
+        return NodeTools.isEmptyYAML( _n );
+    }
+
+    /**
      *  For SnakeYAML Library based subclass of this, simply return 'NodeTools.getNewSingleMap( newRootElem, "", this.dumperoptions )' .. or .. for EsotericSoftware.com-based LinkedHashMap-based library, simply return 'new LinkedHashMap&lt;&gt;.put( newRootElem, "" )'
      *  @param _newRootElemStr the string representing 'lhs' in "lhs: rhs" single YAML entry
      *  @param _valElemStr the string representing 'rhs' in "lhs: rhs" single YAML entry
