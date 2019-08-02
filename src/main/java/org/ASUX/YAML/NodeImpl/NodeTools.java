@@ -169,6 +169,27 @@ public class NodeTools {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
+    public static ScalarNode defaultEmptyYAML = null;
+
+    private static String defaultEmptyYAMLAsString = null;
+    // private static final String defaultEmptyYAMLAsString = defaultEmptyYAML.toString();
+    private static boolean isDefaultEmptyYAMLInitialized = false;
+
+    private static void initDefaultEmptyYAML() {
+        final String HDR = CLASSNAME +": initDefaultEmptyYAML(): ";
+        if (   !    NodeTools.isDefaultEmptyYAMLInitialized ) {
+            try {
+                NodeTools.defaultEmptyYAML = new ScalarNode( Tag.STR, "", null, null, GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter().getDefaultScalarStyle() ); // This should be representing an empty YAML.  I hope!      DumperOptions.ScalarStyle.PLAIN
+                NodeTools.defaultEmptyYAMLAsString = NodeTools.Node2YAMLString( defaultEmptyYAML );
+                NodeTools.isDefaultEmptyYAMLInitialized = true;
+            } catch( Exception e ) {
+                e.printStackTrace( System.err );
+                System.err.println( HDR + "Unexpected Serious Internal Error" );
+                System.exit(99);
+            }
+        }
+    }
+
     /**
      *  Generates an empty YAML-compatible Scalar-node, which when output as YAML gives you an empty-string '', and when printed to JSON gives '{}'.
      *  @param _dumperoptions important to pass in a non-null object.  This option is most valuable when you'll EVER save this new MappingNode into a file (or dump it to Stdout)
@@ -180,7 +201,34 @@ public class NodeTools {
         // new Mark( "endMark",   1, 1, 1, "String buffer", 2)
         // new MappingNode( Tag.MAP, false, new List<NodeTuple>(), Mark startMark, Mark endMark, DumperOptions.FlowStyle.BLOCK ) ;
         // return new ScalarNode( Tag.NULL, "null", null, null, DumperOptions.ScalarStyle.PLAIN ); // This should be representing an empty YAML.  I hope!
-        return new ScalarNode( Tag.STR, "", null, null, _dumperoptions.getDefaultScalarStyle() ); // This should be representing an empty YAML.  I hope!      DumperOptions.ScalarStyle.PLAIN
+        NodeTools.initDefaultEmptyYAML();
+        return NodeTools.defaultEmptyYAML;
+    }
+
+    /**
+     *  If any of the Read/List/Replace/Table/Batch commands returned "Empty YAML" (assuming the code retured {@link #getEmptyYAML()}), this is your SIMPLEST way of checking if the YAML is empty.
+     *  @param _n Nullable value
+     *  @return true if the YAML is empty (specifically, if it is the same as what's returned by {@link #getEmptyYAML()})
+     */
+    protected static boolean isEmptyYAML( final Node _n ) {
+        final String HDR = CLASSNAME +": isEmptyYAML(_n): ";
+        if ( _n == null )
+            return true;
+
+        NodeTools.initDefaultEmptyYAML();
+        if ( _n == NodeTools.defaultEmptyYAML ) // as in, the memory addresses are the same!
+            return true;
+
+        // if someone else created the empty YAML, let's do a String-level check.
+        // final String s = _n.toString(); // will Not be null.
+        try {
+            final String s = NodeTools.Node2YAMLString( _n );
+            return ( defaultEmptyYAMLAsString.equals( s ) );
+        } catch( Exception e ) {
+            e.printStackTrace( System.err );
+            System.err.println( HDR + "Unexpected Internal Error" );
+            return false;
+        }
     }
 
     //==============================================================================
