@@ -415,7 +415,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                 // !!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!! This iterator / for-loop counts DOWN.
                 final ScalarNode keySN = new ScalarNode( Tag.STR,     yp.yamlElemArr[ix],     null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
                 final List<NodeTuple> nt = new LinkedList<NodeTuple>();
-                nt.add ( new NodeTuple( keySN, prevchildelem ) );
+                nt.add ( new NodeTuple( keySN, prevchildelem ) ); // Even if 'prevchildelem' is 'EmptyYAML' this is OK.
                 final Node newMN = new MappingNode( Tag.MAP, false,    nt,    null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
                 if ( this.verbose ) System.out.println( HDR +": added the NEW path @ "+ ix +" yp.yamlElemArr[ix]="+ yp.yamlElemArr[ix] +"  newMN= ["+ newMN +"]" );
                 prevchildelem = newMN;
@@ -449,7 +449,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                 // the lowestExistingNode does NOT have a SPECIFIC EXISTING 'lhs: rhs' entry WHERE lhs===_lhsKeyStr
                 if ( this.verbose ) System.out.println( HDR +" getNodeTuple( existingMapNode, _lhsKeyStr="+ _lhsKeyStr +" ) == null. So.. adding new NodeTuple @ that location to 'tuples'." );
                 final ScalarNode newKeySN = new ScalarNode( Tag.STR,     _lhsKeyStr,     null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
-                tuples.add( new NodeTuple( newKeySN,  prevchildelem) );
+                tuples.add( new NodeTuple( newKeySN,  prevchildelem) ); // If prevchildelem is 'EmptyYAML' this is still OK.
             } else {
                 // Oh!  the lowestExistingNode __ALREADY__ has a SPECIFIC EXISTING 'lhs: rhs' entry WHERE lhs===_lhsKeyStr !
                 final Node keyN = kv.getKeyNode();
@@ -468,6 +468,8 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                         rhsTuples.addAll( newChilRHSTuples );
                     // } else if ( valN.getNodeId() == NodeId.scalar && valN instanceof ScalarNode ) {
                     // } else if ( valN.getNodeId() == NodeId.sequence && valN instanceof SequenceNode ) {
+                    } else if ( NodeTools.isEmptyYAML( prevchildelem ) ) {
+                        // do Nothing.  This is useful within BATCH YAML commands, when we can have 'missing' YAML show up as 'EmptyYAML' (to prevent Null Pointers)
                     } else {
                         throw new Exception( "The existing node @ LHS="+ keyAsStr +" RHS that is a 'Map', but the new content is NOT a 'Map'.  Instead it is of type '"+ valN.getNodeId() +"'. For Insert/ReplaceCommand, that is unacceptable." );
                     }
@@ -477,7 +479,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                     // Since this method is common to both InsertYamlEntry.java and ReplaceYamlEntry.java (which is a subclass of InsertYamlEntry.java) .. we need to distinguish.
                     if ( _bIsReplaceCmd || scalarValN.getValue().matches("\\s*") ) {
                         if ( this.verbose ) System.out.println( HDR +": REPLACING the RHS for lowestExistingNode @ keyStr="+ _lhsKeyStr +" with RHS='"+ scalarValN.getValue() +"' " );
-                        final NodeTuple newkv = new NodeTuple( keyN, prevchildelem );
+                        final NodeTuple newkv = new NodeTuple( keyN, prevchildelem ); // Even if 'prevchildelem' is 'EmptyYAML', this is OK.
                          // since NodeTuples are immutable.. we remove the old entry and add the new entry.
                         final int ix = tuples.indexOf( kv ); // ix === location of existing NodeTuple within 'tuples'
                         tuples.add( ix, newkv); // insert BEFORE the EXISTING-NodeTuple 'kv'
@@ -491,7 +493,9 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                     final SequenceNode seqN = (SequenceNode) valN;
                     final java.util.List<Node> listOfNodes = seqN.getValue();
                     if ( this.verbose ) System.out.println( HDR +": lowestExistingNode @ keyStr="+ _lhsKeyStr +" is a SequenceNode ="+ seqN +" " );
-                    listOfNodes.add ( prevchildelem );
+                    if (  !   NodeTools.isEmptyYAML( prevchildelem ) ) { // It makes NO semantic-sense, to add 'missing' YAML / 'EmptyYAML' to a SequenceNode
+                        listOfNodes.add ( prevchildelem );
+                    }
 
                 } else {
                     // valN is neither MappingNode nor a ScalarNode
