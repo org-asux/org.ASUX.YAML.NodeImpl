@@ -203,7 +203,7 @@ public class GenericYAMLWriter {
                 // per https://bitbucket.org/asomov/snakeyaml/src/tip/src/test/java/examples/CustomMapExampleTest.java
                 // See also https://bitbucket.org/asomov/snakeyaml/wiki/Documentation#markdown-header-collections
                 if ( this.snakeYaml != null || this.javaWriter != null ) {
-                    if ( this.verbose ) System.err.println( HDR +"_output is of type: "+ _output.getClass().getName() );
+                    if ( this.verbose ) System.out.println( HDR +"_output is of type: "+ _output.getClass().getName() );
                     assertTrue( _output == null || _output instanceof Node || _output instanceof String );
                     @SuppressWarnings("unchecked")
                     final Node _outputNode = (Node) _output;
@@ -230,7 +230,7 @@ public class GenericYAMLWriter {
                     //         emitter.emit(event);
                     //     }
                     //     fail("Loading must fail for " + files[i].getAbsolutePath());
-                    //     System.err.println("Loading must fail for " + files[i].getAbsolutePath());
+                    //     System.out.println("Loading must fail for " + files[i].getAbsolutePath());
                     // } catch( org.yaml.snakeyaml.error.YAMLException e ) {
                     // } catch (Exception e) {
                     // }
