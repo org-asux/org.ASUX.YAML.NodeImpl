@@ -35,6 +35,7 @@ package org.ASUX.YAML.NodeImpl;
 import org.ASUX.yaml.YAMLPath;
 import org.ASUX.yaml.YAML_Libraries;
 import org.ASUX.yaml.MemoryAndContext;
+import org.ASUX.yaml.YAMLImplementation;
 import org.ASUX.yaml.Enums;
 import org.ASUX.yaml.CmdLineArgs;
 import org.ASUX.yaml.CmdLineArgsBatchCmd;
@@ -106,118 +107,39 @@ import static org.junit.Assert.*;
  * @see org.ASUX.YAML.NodeImpl.DeleteYamlEntry
  * @see org.ASUX.YAML.NodeImpl.ReplaceYamlEntry
  */
-public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
+public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
 
     private static final long serialVersionUID = 312L;
 
     public static final String CLASSNAME = CmdInvoker.class.getName();
 
-    // private static final String TMP FILE = System.getProperty("java.io.tmpdir") +"/org.ASUX.yaml.STDOUT.txt";
-
-    protected transient GenericYAMLScanner YAMLScanner;
-    protected transient GenericYAMLWriter YAMLWriter;
-
-    public transient DumperOptions dumperopt = null;
-
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=================================================================================
+
     /**
      *  The constructor exclusively for use by  main() classes anywhere.
      *  @param _verbose Whether you want deluge of debug-output onto System.out.
      *  @param _showStats Whether you want a final summary onto console / System.out
+     *  @throws Exception if YAML-implementation is Not properly initialized or YAML-implementation cannot be "loaded"
      */
-    public CmdInvoker( final boolean _verbose, final boolean _showStats ) {
-        this( _verbose, _showStats, null, null );
+    public CmdInvoker( final boolean _verbose, final boolean _showStats ) throws Exception {
+        this( _verbose, _showStats, null );
     }
 
     /**
-     *  Variation of constructor that allows you to pass-in memory from another previously existing instance of this class.  Useful within {@link BatchCmdProcessor} which creates new instances of this class, whenever it encounters a YAML or AWS command within the Batch-file.
+     *  Variation of constructor that allows you to pass-in memory from another previously existing instance of this class.  Useful within org.ASUX.YAML.NodeImp.BatchYamlProcessor which creates new instances of this class, whenever it encounters a YAML or AWS command within the Batch-file.
      *  @param _verbose Whether you want deluge of debug-output onto System.out.
      *  @param _showStats Whether you want a final summary onto console / System.out
-     *  @param _memoryAndContext pass in memory from another previously existing instance of this class.  Useful within {@link BatchCmdProcessor} which creates new instances of this class, whenever it encounters a YAML or AWS command within the Batch-file.
-     * @param _dopt a non-null reference to org.yaml.snakeyaml.DumperOptions instance.  CmdInvoker can provide this reference.
+     *  @param _memoryAndContext pass in memory from another previously existing instance of this class.  Useful within org.ASUX.YAML.CollectionImpl.BatchYamlProcessor which creates new instances of this class, whenever it encounters a YAML or AWS command within the Batch-file.
      */
-    public CmdInvoker( final boolean _verbose, final boolean _showStats, final MemoryAndContext _memoryAndContext, final DumperOptions _dopt ) {
+    public CmdInvoker( final boolean _verbose, final boolean _showStats, final MemoryAndContext _memoryAndContext ) {
         super(_verbose, _showStats, _memoryAndContext );
-        this.dumperopt = _dopt;
-        init();
-    }
-
-    protected void init() {
-        this.YAMLScanner = new GenericYAMLScanner( this.verbose );
-        this.YAMLWriter = new GenericYAMLWriter( this.verbose );
     }
 
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=================================================================================
-
-    /**
-     * know which YAML-parsing/emitting library was chosen by user.  Ideally used within a Batch-Yaml script / BatchCmdProcessor.java
-     * @return the YAML-library in use. See {@link YAML_Libraries} for legal values to this parameter
-     */
-    @Override
-    public YAML_Libraries getYamlLibrary() {
-        // why make this check below with ass-ert()?
-        // Why shouln't users use one library to read YAML and another to write YAML?
-        final YAML_Libraries sclib = this.YAMLScanner.getYamlLibrary();
-        // String s = sclib.toString();
-        // s = (s==null) ? "null" : s;
-        // assertTrue( s.equals( this.YAMLWriter.getYamlLibrary() ) );
-        assertTrue( sclib == this.YAMLWriter.getYamlLibrary() );
-        return sclib;
-    }
-
-    /**
-     * Allows you to set the YAML-parsing/emitting library of choice.  Ideally used within a Batch-Yaml script.
-     * @param _l the YAML-library to use going forward. See {@link YAML_Libraries} for legal values to this parameter
-     */
-    @Override
-    public void setYamlLibrary( final YAML_Libraries _l ) {
-        if ( this.YAMLScanner == null || this.YAMLWriter == null )
-            this.init();
-        this.YAMLScanner.setYamlLibrary(_l);
-        this.YAMLWriter.setYamlLibrary(_l);
-    }
-
-    /**
-     * Reference to the implementation of the YAML read/parsing ONLY
-     * @return a reference to the YAML Library in use.
-     */
-    public GenericYAMLScanner getYamlScanner() {
-        return this.YAMLScanner;
-    }
-
-    /**
-     * Reference to the implementation of the YAML read/parsing ONLY
-     * @return a reference to the YAML Library in use.
-     */
-    public GenericYAMLWriter getYamlWriter() {
-        return this.YAMLWriter;
-    }
-
-    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-    /**
-     *  <p>Example: For SnakeYAML-library based subclass of this, this should return DumperOptions.class</p>
-     *  <p>This is to be used primarily within BatchCmdProcessor.onAnyCmd().</p>
-     *  @return name of class of the object that subclasses of {@link CmdInvoker} use, to configure YAML-Output (example: SnakeYAML uses DumperOptions)
-     */
-    @Override
-    public Class<?> getLibraryOptionsClass() {
-        return DumperOptions.class;
-    }
-
-    /**
-     *  <p>Example: For SnakeYAML-library based subclass of this, this should return the reference to the instance of the class DumperOption</p>
-     *  <p>This is to be used primarily within BatchCmdProcessor.onAnyCmd().</p>
-     * @return instance/object that subclasses of {@link CmdInvoker} use, to configure YAML-Output (example: SnakeYAML uses DumperOptions objects)
-     */
-    @Override
-    public Object getLibraryOptionsObject() {
-        return this.dumperopt;
-    }
 
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -233,13 +155,18 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
      *  @throws IOException if the filenames within _cmdLA give any sort of read/write troubles
      *  @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
+    @Override
     public Object processCommand ( org.ASUX.yaml.CmdLineArgsCommon _cmdLA, final Object _inputData )
                 throws FileNotFoundException, IOException, Exception,
                 YAMLPath.YAMLPathException
     {
         assertTrue( _cmdLA instanceof org.ASUX.yaml.CmdLineArgs );
         final org.ASUX.yaml.CmdLineArgs cmdLineArgs = (org.ASUX.yaml.CmdLineArgs) _cmdLA;
-        final String HDR = CLASSNAME + ": processCommand("+ cmdLineArgs.cmdType +"): ";
+        final String HDR = CLASSNAME + ": processCommand("+ cmdLineArgs.cmdType +",_inputData): "; // NOTE !!!!!! _cmdLA/CmdLineArgsCommon .. does NOT have 'cmdType' instance-variable
+
+        final NodeTools nodetools = (NodeTools) super.getYAMLImplementation();
+        assertTrue( nodetools != null );
+        NodeTools.updateDumperOptions( nodetools.getDumperOptions(), _cmdLA.getQuoteType() ); // Important <<---------- <<---------- <<-----------
 
         assertTrue( _inputData instanceof Node );
         // why didn't we just make 2nd parameter of this method to be Node?
@@ -248,46 +175,29 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
         @SuppressWarnings("unchecked")
         final Node _inputNode = (Node) _inputData;
 
-        // This entire CollectionsImpl library clearly is chained to the YAML.org SNAKEYAML library.
-        // So, let's make that explicit
-        this.getYamlScanner().setYamlLibrary( YAML_Libraries.SNAKEYAML_Library );
-        this.getYamlWriter().setYamlLibrary( YAML_Libraries.SNAKEYAML_Library );
-
-        if ( this.dumperopt == null ) { // this won't be null, if this object was created within BatchCmdProcessor.java
-            this.dumperopt = GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter();
-        }
-        switch( cmdLineArgs.getQuoteType() ) {
-            case DOUBLE_QUOTED: dumperopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.DOUBLE_QUOTED );  break;
-            case SINGLE_QUOTED: dumperopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.SINGLE_QUOTED );  break;
-            case LITERAL:       dumperopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.LITERAL );        break;
-            case FOLDED:        dumperopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
-            case PLAIN:         dumperopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.PLAIN );          break;
-            default:            dumperopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
-        }
-
         switch ( cmdLineArgs.cmdType ) {
         case READ:
-            ReadYamlEntry readcmd = new ReadYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats, dumperopt );
+            ReadYamlEntry readcmd = new ReadYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats, nodetools.getDumperOptions() );
             readcmd.searchYamlForPattern( _inputNode, cmdLineArgs.yamlRegExpStr, cmdLineArgs.yamlPatternDelimiter );
             final Node outputStr = readcmd.getOutput();
             return outputStr;
 
         case LIST:
-            ListYamlEntry listcmd = new ListYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats, dumperopt, " , " );
+            ListYamlEntry listcmd = new ListYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats, nodetools.getDumperOptions(), " , " );
             listcmd.searchYamlForPattern( _inputNode, cmdLineArgs.yamlRegExpStr, cmdLineArgs.yamlPatternDelimiter );
             final Node outputStr2 = listcmd.getOutput();
             return outputStr2;
 
         case DELETE:
             if ( cmdLineArgs.verbose ) System.out.println( HDR +" about to start DELETE command");
-            DeleteYamlEntry delcmd = new DeleteYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats, dumperopt );
+            DeleteYamlEntry delcmd = new DeleteYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats, nodetools.getDumperOptions() );
             delcmd.searchYamlForPattern( _inputNode, cmdLineArgs.yamlRegExpStr, cmdLineArgs.yamlPatternDelimiter );
             return _inputNode;
 
         case TABLE:
             final CmdLineArgsTableCmd claTbl = (CmdLineArgsTableCmd) cmdLineArgs;
             if (claTbl.verbose) System.out.println( HDR +" claTbl.yamlRegExpStr="+ claTbl.yamlRegExpStr +" & tableColumns=[" + claTbl.tableColumns +"]" );
-            TableYamlQuery tblcmd = new TableYamlQuery( claTbl.verbose, claTbl.showStats, dumperopt, claTbl.tableColumns, claTbl.yamlPatternDelimiter );
+            TableYamlQuery tblcmd = new TableYamlQuery( claTbl.verbose, claTbl.showStats, nodetools.getDumperOptions(), claTbl.tableColumns, claTbl.yamlPatternDelimiter );
             tblcmd.searchYamlForPattern( _inputNode, claTbl.yamlRegExpStr, claTbl.yamlPatternDelimiter );
             final Node output = tblcmd.getOutput();
             return output;
@@ -297,7 +207,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             if (claIns.verbose) System.out.println( HDR +" claIns.yamlRegExpStr="+ claIns.yamlRegExpStr +" & loading @Insert-file: " + claIns.insertFilePath);
             final Object newContent = this.getDataFromReference( claIns.insertFilePath );
             if (claIns.verbose) System.out.println( HDR +" about to start INSERT command using: [" + newContent.toString() + "]");
-            InsertYamlEntry inscmd = new InsertYamlEntry( claIns.verbose, claIns.showStats, dumperopt, newContent );
+            InsertYamlEntry inscmd = new InsertYamlEntry( claIns.verbose, claIns.showStats, nodetools.getDumperOptions(), newContent );
             inscmd.searchYamlForPattern( _inputNode, claIns.yamlRegExpStr, claIns.yamlPatternDelimiter );
             final Node output3 = inscmd.getOutput();
             return output3;
@@ -307,7 +217,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             if (claRepl.verbose) System.out.println( HDR +" loading @Replace-file: " + claRepl.replaceFilePath);
             final Object replContent = this.getDataFromReference( claRepl.replaceFilePath );
             if (claRepl.verbose) System.out.println( HDR +" about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
-            ReplaceYamlEntry replcmd = new ReplaceYamlEntry( claRepl.verbose, claRepl.showStats, dumperopt, replContent );
+            ReplaceYamlEntry replcmd = new ReplaceYamlEntry( claRepl.verbose, claRepl.showStats, nodetools.getDumperOptions(), replContent );
             replcmd.searchYamlForPattern( _inputNode, claRepl.yamlRegExpStr, claRepl.yamlPatternDelimiter );
             final Node output5 = replcmd.getOutput();
             return output5;
@@ -317,7 +227,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
             if (claBatch.verbose) System.out.println( HDR +" about to start BATCH command using: BATCH file [" + claBatch.batchFilePath + "]");
             final Enums.ScalarStyle quoteStyle = ( claBatch.getQuoteType() == Enums.ScalarStyle.UNDEFINED ) ? Enums.ScalarStyle.PLAIN : claBatch.getQuoteType();
 
-            final BatchCmdProcessor batcher = new BatchCmdProcessor( claBatch.verbose, claBatch.showStats, claBatch.isOffline(), quoteStyle, dumperopt );
+            final BatchCmdProcessor batcher = new BatchCmdProcessor( claBatch.verbose, claBatch.showStats, claBatch.isOffline(), quoteStyle, nodetools.getDumperOptions() );
             batcher.setMemoryAndContext( this.memoryAndContext );
             final Node outpData2 = batcher.go( claBatch.batchFilePath, _inputNode );
             if ( this.verbose ) System.out.println( HDR +" outpData2 =" + outpData2 +"\n\n");
@@ -334,9 +244,9 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
 
             switch ( cmdLineArgs.cmdType ) {
                 case MACRO:     assertTrue( false ); // we can't get here with '_input' ..  _WITHOUT_ it being a _VALID_ YAML content.   So, so might as well as use 'MacroYamlProcessor'
-                                // macroStrPr = new MacroStringProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'dumperopt'
+                                // macroStrPr = new MacroStringProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'nodetools.getDumperOptions()'
                                 break;
-                case MACROYAML: macroYamlPr = new MacroYamlProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'dumperopt'
+                case MACROYAML: macroYamlPr = new MacroYamlProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'nodetools.getDumperOptions()'
                                 break;
                 default: assertTrue( false ); // should not be here.
             }
@@ -387,7 +297,9 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
      */
     public Object getDataFromReference( final String _src )
                                 throws FileNotFoundException, IOException, Exception
-    {   return InputsOutputs.getDataFromReference( _src, this.memoryAndContext, this.getYamlScanner(), this.dumperopt, this.verbose );
+    {
+        final NodeTools nodetools = (NodeTools) this.getYAMLImplementation();
+        return InputsOutputs.getDataFromReference( _src, this.memoryAndContext, nodetools.getYAMLScanner(), nodetools.getDumperOptions(), this.verbose );
     }
 
     //==============================================================================
@@ -404,9 +316,11 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
      */
     public void saveDataIntoReference( final String _dest, final Object _input )
                             throws FileNotFoundException, IOException, Exception
-    {   InputsOutputs.saveDataIntoReference( _dest, _input, this.memoryAndContext, this.getYamlWriter(), this.dumperopt, this.verbose );
+    {
+        final NodeTools nodetools = (NodeTools) this.getYAMLImplementation();
+        InputsOutputs.saveDataIntoReference( _dest, _input, this.memoryAndContext, nodetools.getYAMLWriter(), nodetools.getDumperOptions(), this.verbose );
     }
-                        
+
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
@@ -415,16 +329,19 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker {
      *  <p>This method needs to supplement org.ASUX.YAML.CmdInvoker.deepClone() as this subclass (org.ASUX.YAML.NodeImpl.CmdInvoker) has it's own transient instance-fields/variables.</p>
      *  <p>Such Transients are made Transients for only ONE-SINGLE REASON - they are NOT serializable).</p>
      *  <p>!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!</p>
-     *  <p>So, after a deepClone() of CmdInvoker.java .. you'll need to call: </p>
+     *  <p>So, after a deepClone() of CmdInvoker.class .. you'll need to call: </p>
      *  <p> <code> clone.dumperopt = origObj.dumperopt; </code> <br>
      *  @param origObj the non-null original to clone
      *  @return a properly cloned and re-initiated clone of the original (that works around instance-variables that are NOT serializable)
      *  @throws Exception when org.ASUX.common.Utils.deepClone clones the core of this class-instance 
      */
     public static org.ASUX.YAML.NodeImpl.CmdInvoker deepClone( final org.ASUX.YAML.NodeImpl.CmdInvoker origObj ) throws Exception {
-        final org.ASUX.yaml.CmdInvoker newCmdInvk = org.ASUX.yaml.CmdInvoker.deepClone( origObj );
+        // final org.ASUX.yaml.CmdInvoker<Node> newCmdInvk = org.ASUX.yaml.CmdInvoker<Node>.deepClone( origObj );
+        final org.ASUX.yaml.CmdInvoker<Node> newCmdInvk = origObj.deepClone( origObj );
         final org.ASUX.YAML.NodeImpl.CmdInvoker newCmdinvoker = (org.ASUX.YAML.NodeImpl.CmdInvoker) newCmdInvk;
-        newCmdinvoker.dumperopt = NodeTools.deepClone( origObj.dumperopt );
+        // NOTE: Parent takes care of deep-cloning the YAML-implemenatation.  So, no need to deepclone the DumperOptions.
+        // newCmdinvoker.getYAMLImplementation().setLibraryOptionsObject( NodeTools.deepClone( origObj.getYAMLImplementation().getLibraryOptionsObject() ) );
+        // newCmdinvoker.getYAMLImplementation().setLibraryOptionsObject( NodeTools.deepClone( (org.yaml.snakeyaml.DumperOptions) origObj.getYAMLImplementation().getLibraryOptionsObject() ) );
         return newCmdinvoker;
     }
 
