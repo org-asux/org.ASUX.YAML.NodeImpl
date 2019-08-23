@@ -468,7 +468,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                         rhsTuples.addAll( newChilRHSTuples );
                     // } else if ( valN.getNodeId() == NodeId.scalar && valN instanceof ScalarNode ) {
                     // } else if ( valN.getNodeId() == NodeId.sequence && valN instanceof SequenceNode ) {
-                    } else if ( NodeTools.isEmptyYAML( prevchildelem ) ) {
+                    } else if ( NodeTools.isEmptyNodeYAML( prevchildelem ) ) {
                         // do Nothing.  This is useful within BATCH YAML commands, when we can have 'missing' YAML show up as 'EmptyYAML' (to prevent Null Pointers)
                     } else {
                         throw new Exception( "The existing node @ LHS="+ keyAsStr +" RHS that is a 'Map', but the new content is NOT a 'Map'.  Instead it is of type '"+ valN.getNodeId() +"'. For Insert/ReplaceCommand, that is unacceptable." );
@@ -493,7 +493,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                     final SequenceNode seqN = (SequenceNode) valN;
                     final java.util.List<Node> listOfNodes = seqN.getValue();
                     if ( this.verbose ) System.out.println( HDR +": lowestExistingNode @ keyStr="+ _lhsKeyStr +" is a SequenceNode ="+ seqN +" " );
-                    if (  !   NodeTools.isEmptyYAML( prevchildelem ) ) { // It makes NO semantic-sense, to add 'missing' YAML / 'EmptyYAML' to a SequenceNode
+                    if (  !   NodeTools.isEmptyNodeYAML( prevchildelem ) ) { // It makes NO semantic-sense, to add 'missing' YAML / 'EmptyYAML' to a SequenceNode
                         listOfNodes.add ( prevchildelem );
                     }
 
