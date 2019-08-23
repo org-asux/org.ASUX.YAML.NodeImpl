@@ -109,7 +109,7 @@ public class GenericYAMLWriter {
      * Tells you what internal implementation of the YAML read/parsing is, and by implication what the internal implementation for YAML-output generation is.
      * @return a reference to the YAML Library in use. See {@link org.ASUX.yaml.YAML_Libraries} for legal values.
      */
-    public YAML_Libraries getYamlLibrary() {
+    public YAML_Libraries getYAMLLibrary() {
         return this.sYAMLLibrary;
     }
 
@@ -117,7 +117,7 @@ public class GenericYAMLWriter {
      * Allows you to set the YAML-parsing/emitting library of choice.  Ideally used within a Batch-Yaml script.
      * @param _l the YAML-library to use going forward. See {@link org.ASUX.yaml.YAML_Libraries} for legal values to this parameter
      */
-    public void setYamlLibrary( final YAML_Libraries _l ) {
+    public void setYAMLLibrary( final YAML_Libraries _l ) {
         this.sYAMLLibrary = _l;
     }
 
@@ -140,7 +140,7 @@ public class GenericYAMLWriter {
     public void prepare( final java.io.Writer _javawriter, final DumperOptions _dumperoptions ) throws Exception
     {
         // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
-        switch ( this.getYamlLibrary() ) {
+        switch ( this.getYAMLLibrary() ) {
             case NodeImpl_Library:
             case SNAKEYAML_Library:
                 // https://yaml.org/spec/1.2/spec.html#id2762107
@@ -153,7 +153,7 @@ public class GenericYAMLWriter {
             case ESOTERICSOFTWARE_Library:
             case ASUXYAML_Library:
             // default:
-                final String es = CLASSNAME + ": prepare(): Unimplemented YAML-Library: " + this.getYamlLibrary();
+                final String es = CLASSNAME + ": prepare(): Unimplemented YAML-Library: " + this.getYAMLLibrary();
                 System.err.println( es );
                 throw new Exception( es );
                 // break;
@@ -180,7 +180,7 @@ public class GenericYAMLWriter {
     //=================================================================================
 
     /**
-     * Write the YAML content (_output parameter) using the YAML-Library specified via {@link #setYamlLibrary}
+     * Write the YAML content (_output parameter) using the SnakeYAML-Library
      * and to the java.io.Writer reference provided via {@link #prepare}.
      * @param _output the content you want written out as a YAML file.
      * @param _dumperoptions a non-null reference to org.yaml.snakeyaml.DumperOptions instance.  CmdInvoker can provide this reference.
@@ -196,7 +196,7 @@ public class GenericYAMLWriter {
         }
 
         // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
-        switch ( this.getYamlLibrary() ) {
+        switch ( this.getYAMLLibrary() ) {
             case NodeImpl_Library:
             case SNAKEYAML_Library:
                 // https://yaml.org/spec/1.2/spec.html#id2762107
@@ -235,7 +235,7 @@ public class GenericYAMLWriter {
                     // } catch (Exception e) {
                     // }
                 } else {
-                    throw new Exception( CLASSNAME +" write("+ this.getYamlLibrary() +"): cannot invoke write() before prepare()." );
+                    throw new Exception( CLASSNAME +" write("+ this.getYAMLLibrary() +"): cannot invoke write() before prepare()." );
                 } // if esotericsoftwareWriter !=   null
                 break;
 
@@ -243,7 +243,7 @@ public class GenericYAMLWriter {
             case ESOTERICSOFTWARE_Library:
             case ASUXYAML_Library:
             // default:
-                final String es = CLASSNAME + ": prepare(): Unimplemented YAML-Library: " + this.getYamlLibrary();
+                final String es = CLASSNAME + ": prepare(): Unimplemented YAML-Library: " + this.getYAMLLibrary();
                 System.err.println( es );
                 throw new Exception( es );
                 // break;
@@ -260,7 +260,7 @@ public class GenericYAMLWriter {
      */
     public void close() throws Exception {
         // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
-        switch ( this.getYamlLibrary() ) {
+        switch ( this.getYAMLLibrary() ) {
             case NodeImpl_Library:
             case SNAKEYAML_Library:
                 // Nothing to close if we use new org.yaml.snakeyaml.Yaml().dump();
@@ -270,7 +270,7 @@ public class GenericYAMLWriter {
             case ESOTERICSOFTWARE_Library:
             case ASUXYAML_Library:
             default:
-                final String es = CLASSNAME + ": prepare(): Unimplemented YAML-Library: " + this.getYamlLibrary();
+                final String es = CLASSNAME + ": prepare(): Unimplemented YAML-Library: " + this.getYAMLLibrary();
                 System.err.println( es );
                 throw new Exception( es );
                 // break;

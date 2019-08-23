@@ -90,7 +90,7 @@ public class GenericYAMLScanner {
      * Tells you what internal implementation of the YAML read/parsing is, and by implication what the internal implementation for YAML-output generation is.
      * @return a reference to the YAML Library in use. See {@link org.ASUX.yaml.YAML_Libraries} for legal values.
      */
-    public YAML_Libraries getYamlLibrary() {
+    public YAML_Libraries getYAMLLibrary() {
         return this.sYAMLLibrary;
     }
 
@@ -98,7 +98,7 @@ public class GenericYAMLScanner {
      * Allows you to set the YAML-parsing/emitting library of choice.  Ideally used within a Batch-Yaml script.
      * @param _l the YAML-library to use going forward. See {@link org.ASUX.yaml.YAML_Libraries} for legal values to this parameter
      */
-    public void setYamlLibrary( final YAML_Libraries _l ) {
+    public void setYAMLLibrary( final YAML_Libraries _l ) {
         this.sYAMLLibrary = _l;
     }
 
@@ -127,18 +127,18 @@ See ALPHA_S inside https://bitbucket.org/asomov/snakeyaml/src/default/src/main/j
 
 
     /**
-     * This method will use the YAML-Library specified via {@link #setYamlLibrary} and load the YAML content (pointed to by the _inreader paramater).
+     * This method will use the SnakeYAML-Library and load the YAML content (pointed to by the _inreader paramater).
      * @param _inreader either a StringReader or a FileReader
      * @return instance of {@link org.ASUX.common.Output.Object}
      * @throws Exception if the YAML libraries have any issues with ERRORs inthe YAML or other issues.
      */
     public Node load( final java.io.Reader _inreader ) throws Exception
     {
-        if (this.verbose) System.out.println( CLASSNAME + ": load(java.io.Reader): this.getYamlLibrary()="+ this.getYamlLibrary() );
+        if (this.verbose) System.out.println( CLASSNAME + ": load(java.io.Reader): this.getYAMLLibrary()="+ this.getYAMLLibrary() );
 
         // -----------------------
         // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
-        switch ( this.getYamlLibrary() ) {
+        switch ( this.getYAMLLibrary() ) {
             case NodeImpl_Library:
             case SNAKEYAML_Library:
                 // https://yaml.org/spec/1.2/spec.html#id2762107
@@ -179,7 +179,7 @@ See ALPHA_S inside https://bitbucket.org/asomov/snakeyaml/src/default/src/main/j
             case ESOTERICSOFTWARE_Library:
             case ASUXYAML_Library:
             default:
-                final String es = CLASSNAME + ": main(): Unimplemented YAML-Library: " + this.getYamlLibrary();
+                final String es = CLASSNAME + ": main(): Unimplemented YAML-Library: " + this.getYAMLLibrary();
                 System.err.println( es );
                 throw new Exception( es );
                 // break;
