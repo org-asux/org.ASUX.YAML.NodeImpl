@@ -35,6 +35,7 @@ package org.ASUX.YAML.NodeImpl;
 import org.ASUX.common.Tuple;
 import org.ASUX.common.Output;
 
+import org.ASUX.yaml.Enums;
 import org.ASUX.yaml.JSONTools;
 import org.ASUX.yaml.YAML_Libraries;
 
@@ -64,14 +65,295 @@ import static org.junit.Assert.*;
  *  <p>One example is the work around required when replacing the 'Key' - within the MACRO command Processor.</p>
  *  <p>If the key is already inside single or double-quotes.. then the replacement ends up as <code>'"newkeystring"'</code></p>
  */
-public class NodeTools {
-
+public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
+{
     public static final String CLASSNAME = NodeTools.class.getName();
-    private CmdInvoker cmdInvoker;
+
+    protected transient GenericYAMLScanner YAMLScanner;
+    protected transient GenericYAMLWriter YAMLWriter;
+
+    public transient DumperOptions dumperopt = null;
+
+    //--------------------------
+    private static DumperOptions default_dumperopts = null;
+    // Following static-code-block is to initialize 'this.default_dumperopts'
+    static {
+        final String HDR = CLASSNAME + ": STATIC_INIT_CODE for NodeTools.default_dumperopts: ";
+        try {
+            GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter();
+        } catch( Exception e ){
+            e.printStackTrace(System.err); // No 'verbose' variable present in Node2YAMLString(). printStackTrace() happens even if user did NOT ask for --verbose
+            System.err.println( HDR +"!!!!!!! SERIOUS INTERNAL FAILURE !!!!!!!!" );
+            System.exit(490);
+        }
+    }
+
+    //=================================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=================================================================================
+
+    public NodeTools( final boolean _verbose ) {
+		super( _verbose, YAML_Libraries.NodeImpl_Library );
+    }
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
+
+    /**
+     * see {@link org.ASUX.yaml.YAMLImplementation#instanceof_YAMLImplClass}
+     */
+    @Override
+    public boolean instanceof_YAMLImplClass( Object o ) {
+        return (o != null) && (o instanceof Node);
+    }
+
+    /**
+     * see {@link org.ASUX.yaml.YAMLImplementation#toStringDebug}
+     */
+    @Override
+    public String toStringDebug( Object _o ) throws Exception {
+        if ( this.instanceof_YAMLImplClass(_o) )
+            return NodeTools.Node2YAMLString( (Node) _o );
+        else
+            throw new RuntimeException( CLASSNAME +": !!! Serious Internal Error!!! toStringDebug(): received an object of type: "+ _o );
+    }
+
+    /**
+     * see {@link org.ASUX.yaml.YAMLImplementation#getEmptyYAML}
+     */
+    @Override
+    public Node getEmptyYAML() {
+        // final DumperOptions dumperopts = NodeTools.getDefault DumperOptions();
+        return NodeTools.getEmptyYAML( this.getDumperOptions() );
+    }
+
+    /**
+     * see {@link org.ASUX.yaml.YAMLImplementation#isEmptyYAML}
+     */
+    @Override
+    public boolean isEmptyYAML( final Node _n ) {
+        return NodeTools.isEmptyNodeYAML( _n );
+    }
+
+    /**
+     * see {@link org.ASUX.yaml.YAMLImplementation#getNewSingleYAMLEntry}
+     */
+    @Override
+    public ScalarNode getNewScalarEntry( final String _val ) {
+        final ScalarNode sn = new ScalarNode( Tag.STR, _val, null, null, this.getDumperOptions().getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.PLAIN
+        // final ScalarNode sn = new ScalarNode( Tag.STR, _val, null, null, NodeTools.getDefault DumperOptions().getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.PLAIN
+        return sn;
+    }
+
+    //==================================================================================
+
+    /**
+     * A utility to help "map" the values of the enum {@link org.ASUX.yaml.Enums.ScalarStyle}, into the "language" of SnakeYAML implementation (see <a>https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java</a>)
+     * @param _dopt a NotNull org.yaml.snakeyaml.DumperOptions object-reference
+     * @param _orgASUXQuoteType an enum value - see {@link org.ASUX.yaml.Enums.ScalarStyle}
+     */
+    public static void updateDumperOptions( final DumperOptions _dopt, final Enums.ScalarStyle _orgASUXQuoteType ) {
+        switch( _orgASUXQuoteType ) {
+            case DOUBLE_QUOTED: _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.DOUBLE_QUOTED );  break;
+            case SINGLE_QUOTED: _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.SINGLE_QUOTED );  break;
+            case LITERAL:       _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.LITERAL );        break;
+            case FOLDED:        _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
+            case PLAIN:         _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.PLAIN );          break;
+            default:            _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
+        }
+    }
+    /**
+     * see {@link org.ASUX.yaml.YAMLImplementation#getNewSingleYAMLEntry}
+     */
+    @Override
+    public Node getNewSingleYAMLEntry( final String _newRootElemStr, final String _valElemStr ) {
+        // final DumperOptions dumperopts = NodeTools.getDefault DumperOptions();
+        return NodeTools.getNewSingleMap( _newRootElemStr, _valElemStr, this.getDumperOptions() );
+    }
+
+    /**
+     * see {@link org.ASUX.yaml.YAMLImplementation#getScalarContent}
+     */
+    @Override
+    public String getScalarContent( final Node _n ) throws Exception {
+        final String HDR = CLASSNAME + ": getScalarContent(_n): ";
+        if ( this.verbose ) System.out.println( HDR +" provided argument =\n" + NodeTools.Node2YAMLString( _n ) + "\n");
+        assertTrue( _n != null );
+        if ( _n instanceof ScalarNode ) {
+            final ScalarNode scalar = (ScalarNode) _n;
+            return scalar.getValue();
+        } else if ( _n instanceof SequenceNode ) {
+            final SequenceNode seqNode = (SequenceNode) _n;
+            final java.util.List<Node> seqs = seqNode.getValue();
+            if( seqs.size() < 1 )
+                return null;
+            assertTrue( seqs.get(0) instanceof ScalarNode );
+            final ScalarNode scalar = (ScalarNode) seqs.get(0);
+            return scalar.getValue();
+        } else {
+            throw new Exception( "Invalid Node of type: "+ _n.getNodeId() +"\nInstead, you provided:\n"+ NodeTools.Node2YAMLString( _n ) );
+        }
+    }
+
+    //=================================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=================================================================================
+
+    /**
+     *  <p>The SnakeYAML implementation relies on <code>g.yaml.snakeyaml.DumperOptions</code> for allowing us to customize how YAML is outputted.</p>
+     *  @param _d important to pass in a non-null object.  This option is most valuable when you'll EVER save this new MappingNode into a file (or dump it to Stdout)
+     */
+    public static void setDefaultDumperOptions( final DumperOptions _d ) {
+        NodeTools.default_dumperopts = _d;
+        assertTrue( NodeTools.default_dumperopts != null );
+    }
+
+    /**
+     *  <p>The SnakeYAML implementation relies on <code>g.yaml.snakeyaml.DumperOptions</code> for allowing us to customize how YAML is outputted.</p>
+     *  @return A non-null object.  This option is most valuable when you'll EVER save this new MappingNode into a file (or dump it to Stdout)
+     */
+    public static DumperOptions getDefaultDumperOptions() { return NodeTools.default_dumperopts; }
+
+    //---------------------------------------------------
+    /**
+     *  <p>The SnakeYAML implementation relies on <code>g.yaml.snakeyaml.DumperOptions</code> for allowing us to customize how YAML is outputted.</p>
+     *  @param _d important to pass in a non-null object.  This option is most valuable when you'll EVER save this new MappingNode into a file (or dump it to Stdout)
+     */
+    public void setDumperOptions( final DumperOptions _d ) {
+        this.dumperopt = _d;
+        assertTrue( this.dumperopt != null );
+    }
+
+    /**
+     *  <p>The SnakeYAML implementation relies on <code>g.yaml.snakeyaml.DumperOptions</code> for allowing us to customize how YAML is outputted.</p>
+     *  @return A non-null object.  This option is most valuable when you'll EVER save this new MappingNode into a file (or dump it to Stdout)
+     */
+    public DumperOptions getDumperOptions() {
+        if ( this.dumperopt != null )
+            return this.dumperopt;
+        else
+            return NodeTools.default_dumperopts;
+    }
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+    /**
+     *  <p>Example: For SnakeYAML-library based subclass of this, this should return DumperOptions.class</p>
+     *  <p>This is to be used primarily within org.ASUX.yaml.BatchCmdProcessor#onAnyCmd().</p>
+     *  @return name of class of the object that subclasses of {@link CmdInvoker} use, to configure YAML-Output (example: SnakeYAML uses DumperOptions)
+     */
+    public Class<?> getLibraryOptionsClass() { return DumperOptions.class; }
+
+    /**
+     *  <p>Example: For SnakeYAML-library based subclass of this, this should return the reference to the instance of the class DumperOption</p>
+     *  <p>This is to be used primarily within org.ASUX.yaml.BatchCmdProcessor#onAnyCmd().</p>
+     * @return instance/object that subclasses of {@link CmdInvoker} use, to configure YAML-Output (example: SnakeYAML uses DumperOptions objects)
+     */
+    public Object getLibraryOptionsObject() { return NodeTools.default_dumperopts; }
+
+    /**
+     *  <p>Example: For SnakeYAML-library based subclass of this, this should return the reference to the instance of the class DumperOption</p>
+     *  <p>This is to be used primarily within org.ASUX.yaml.BatchCmdProcessor#onAnyCmd().</p>
+     * @param _o A NotNull instance/object NotNull reference, to configure YAML-Output (example: SnakeYAML uses DumperOptions objects)
+     */
+    public void setLibraryOptionsObject( final Object _o ) {
+        final String HDR = CLASSNAME + ": setLibraryOptionsObject(): ";
+        // System.err.println( HDR + "Method not implemented !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" );
+        // throw new RuntimeException( HDR + "Method Not Implemeted" );
+        assertTrue( _o != null );
+        if (this.verbose) System.out.println( HDR +" about to convert object of type "+ _o.getClass().getName() +" into org.yaml.snakeyaml.DumperOptions" );
+        final DumperOptions dopt = (DumperOptions) _o;
+        this.setDumperOptions( dopt );
+    }
+
+    //=================================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=================================================================================
+
+    /**
+     * Reference to the implementation of the YAML read/parsing ONLY
+     * @return a reference to the YAML Library in use.
+     */
+    public GenericYAMLScanner getYAMLScanner() {
+        return this.YAMLScanner;
+    }
+
+    /**
+     *  @param _sc NotNull reference to {@link org.ASUX.YAML.NodeImpl.GenericYAMLScanner}
+     */
+    public void setYAMLScanner( final GenericYAMLScanner _sc ) {
+        this.YAMLScanner = _sc;
+    }
+
+    /**
+     * Reference to the implementation of the YAML read/parsing ONLY
+     * @return a reference to the YAML Library in use.
+     */
+    public GenericYAMLWriter getYAMLWriter() {
+        return this.YAMLWriter;
+    }
+
+    /**
+     *  @param _wr NotNull reference to {@link org.ASUX.YAML.NodeImpl.GenericYAMLWriter}
+     */
+    public void setYAMLWriter( final GenericYAMLWriter _wr ) {
+        this.YAMLWriter = _wr;
+    }
+
+    //=================================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=================================================================================
+
+    //=================================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=================================================================================
+
+    /**
+     * This method will use the SnakeYAML-Library and load the YAML content (pointed to by the _inreader paramater).
+     * @param _inreader either a StringReader or a FileReader
+     * @return NotNull instance of T.  Even Empty-YAML will come back as NotNull.
+     * @throws Exception if the YAML libraries have any issues with ERRORs inthe YAML or other issues.
+     */
+    public Node load( final java.io.Reader _inreader ) throws Exception {
+        return this.getYAMLScanner().load( _inreader );
+    }
+
+    /**
+     *  This method takes the java.io.Writer (whether StringWriter or FileWriter) and prepares the YAML library to write to it.
+     *  @param _javawriter StringWriter or FileWriter (cannot be null)
+     * @param _output the content you want written out as a YAML file.
+     *  @throws Exception if the YAML libraries have any issues with ERRORs inthe YAML or other issues.
+     */
+    public void write( final java.io.Writer _javawriter, final Object _output ) throws Exception {
+        // this.getYAMLWriter().prepare( _javawriter, this.getDefault DumperOptions() );
+        // this.getYAMLWriter().write( _output, this.getDefault DumperOptions() );
+        this.write( _javawriter, _output, this.getDumperOptions() );
+    }
+
+    /**
+     *  This method takes the java.io.Writer (whether StringWriter or FileWriter) and prepares the YAML library to write to it.
+     *  @param _javawriter StringWriter or FileWriter (cannot be null)
+     *  @param _output the content you want written out as a YAML file.
+     *  @param _dumperoptions important to pass in a non-null object.  This option is most valuable when you'll EVER save this new MappingNode into a file (or dump it to Stdout)
+     *  @throws Exception if the YAML libraries have any issues with ERRORs inthe YAML or other issues.
+     */
+    public void write( final java.io.Writer _javawriter, final Object _output, final DumperOptions _dumperoptions ) throws Exception {
+        this.getYAMLWriter().prepare( _javawriter, _dumperoptions );
+        this.getYAMLWriter().write( _output, _dumperoptions );
+    }
+
+    /**
+     * Call this in exactly the way you'd close a file after writing to it.  This method should be called ONLY after {@link #write} will no longer be invoked.
+     * @throws Exception if the YAML libraries have any issues with ERRORs inthe YAML or other issues.
+     */
+    public void close() throws Exception {
+        this.getYAMLWriter().close();
+    }
+
+    //=================================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=================================================================================
 
     /**
      *  Takes any STRING-form JSON as input - it better be valid JSON - and reads it back as org.yaml.snakeyaml.nodes.Node (compatible with SnakeYAML Library).
@@ -112,8 +394,8 @@ public class NodeTools {
 
         try {
             final GenericYAMLWriter yamlwriter = new GenericYAMLWriter( false );
-            final DumperOptions dumperopts = GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter();
-            yamlwriter.setYamlLibrary( YAML_Libraries.NodeImpl_Library );
+            final DumperOptions dumperopts = NodeTools.getDefaultDumperOptions();
+            yamlwriter.setYAMLLibrary( YAML_Libraries.SNAKEYAML_Library );
             final java.io.StringWriter strwrtr3 = new java.io.StringWriter();
 
             yamlwriter.prepare( strwrtr3, dumperopts );
@@ -149,7 +431,7 @@ public class NodeTools {
 
         try {
             final GenericYAMLScanner yamlscanner = new GenericYAMLScanner( false );
-            yamlscanner.setYamlLibrary( YAML_Libraries.NodeImpl_Library );
+            yamlscanner.setYAMLLibrary( YAML_Libraries.SNAKEYAML_Library );
 
             final java.io.StringReader strrdr = new java.io.StringReader( _yamlString );
             return yamlscanner.load( strrdr );
@@ -175,11 +457,12 @@ public class NodeTools {
     // private static final String defaultEmptyYAMLAsString = defaultEmptyYAML.toString();
     private static boolean isDefaultEmptyYAMLInitialized = false;
 
+    /* Private implementation code */
     private static void initDefaultEmptyYAML() {
         final String HDR = CLASSNAME +": initDefaultEmptyYAML(): ";
         if (   !    NodeTools.isDefaultEmptyYAMLInitialized ) {
             try {
-                NodeTools.defaultEmptyYAML = new ScalarNode( Tag.STR, "", null, null, GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter().getDefaultScalarStyle() ); // This should be representing an empty YAML.  I hope!      DumperOptions.ScalarStyle.PLAIN
+                NodeTools.defaultEmptyYAML = new ScalarNode( Tag.STR, "", null, null, NodeTools.getDefaultDumperOptions().getDefaultScalarStyle() ); // This should be representing an empty YAML.  I hope!      DumperOptions.ScalarStyle.PLAIN
                 NodeTools.defaultEmptyYAMLAsString = NodeTools.Node2YAMLString( defaultEmptyYAML );
                 NodeTools.isDefaultEmptyYAMLInitialized = true;
             } catch( Exception e ) {
@@ -205,12 +488,13 @@ public class NodeTools {
         return NodeTools.defaultEmptyYAML;
     }
 
+    // *  @param _bIgnoreContentCheck true if you want to IGNORE the CONTENT of the 1st argument (perhaps it's SEMANTICALLY 'empty', but this argument is set to true, no attempt will be made to check content)
     /**
      *  If any of the Read/List/Replace/Table/Batch commands returned "Empty YAML" (assuming the code retured {@link #getEmptyYAML()}), this is your SIMPLEST way of checking if the YAML is empty.
      *  @param _n Nullable value
      *  @return true if the YAML is empty (specifically, if it is the same as what's returned by {@link #getEmptyYAML()})
      */
-    protected static boolean isEmptyYAML( final Node _n ) {
+    protected static boolean isEmptyNodeYAML( final Node _n ) {
         final String HDR = CLASSNAME +": isEmptyYAML(_n): ";
         if ( _n == null )
             return true;
@@ -219,7 +503,10 @@ public class NodeTools {
         if ( _n == NodeTools.defaultEmptyYAML ) // as in, the memory addresses are the same!
             return true;
 
-        // if someone else created the empty YAML, let's do a String-level check.
+        // if ( _bIgnoreContentCheck )
+        //     return false;
+
+            // if someone else created the empty YAML, let's do a String-level check.
         // final String s = _n.toString(); // will Not be null.
         try {
             final String s = NodeTools.Node2YAMLString( _n );
@@ -332,6 +619,42 @@ public class NodeTools {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    public NodeTools deepClone() throws Exception {
+        return NodeTools.deepClone( this );
+    }
+
+    /**
+     *  <p>This method needs to supplement org.ASUX.YAML.CmdInvoker.deepClone() as this subclass (org.ASUX.YAML.NodeImpl.CmdInvoker) has it's own transient instance-fields/variables.</p>
+     *  <p>Such Transients are made Transients for only ONE-SINGLE REASON - they are NOT serializable).</p>
+     *  <p>!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!</p>
+     *  <p>So, after a deepClone() of CmdInvoker.java .. since 'org.yaml.snakeyaml.DumperOptions' is __NOT__ serializable/clonable, you'll need to call: 
+     *       NodeTools.class' static method <code> deepClone( final org.yaml.snakeyaml.DumperOptions _orig )</code> <br>
+     *  @param origObj the non-null original to clone
+     *  @return a properly cloned and re-initiated clone of the original (that works around instance-variables that are NOT serializable)
+     *  @throws Exception when org.ASUX.common.Utils.deepClone clones the core of this class-instance 
+     */
+    public static NodeTools deepClone( final NodeTools origObj ) throws Exception {
+        final NodeTools newobj = org.ASUX.common.Utils.deepClone( origObj );
+
+        newobj.YAMLScanner = new GenericYAMLScanner( origObj.verbose );
+        newobj.YAMLScanner.setYAMLLibrary( origObj.getYAMLScanner().getYAMLLibrary() );
+
+        newobj.YAMLWriter = new GenericYAMLWriter( origObj.verbose );
+        newobj.YAMLWriter.setYAMLLibrary( origObj.getYAMLWriter().getYAMLLibrary() );
+
+        newobj.setDumperOptions( NodeTools.deepClone( origObj.getDumperOptions() ) );
+        return newobj;
+    }
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+
     /** Takes YAML input - as a org.yaml.snakeyaml.nodes.Node instance - and deep-clones it (by writing as a String-YAML and reading it back using {@link GenericYAMLScanner})
      *  @param _orig a org.yaml.snakeyaml.nodes.Node object, as generated by SnakeYAML library
      *  @return a new org.yaml.snakeyaml.nodes.Node object that has Nothing in common with _orig
@@ -340,10 +663,10 @@ public class NodeTools {
     public static final org.yaml.snakeyaml.DumperOptions deepClone( final org.yaml.snakeyaml.DumperOptions _orig ) throws Exception
     {
         final String HDR = CLASSNAME + ": deepClone(DumperOptions): ";
-        final org.yaml.snakeyaml.DumperOptions duopt = GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter();
+        final org.yaml.snakeyaml.DumperOptions duopt = new org.yaml.snakeyaml.DumperOptions();
 // System.out.println( "_Original dumperoptions = "+ _orig.getDefaultScalarStyle() +" "+ _orig.getDefaultFlowStyle() );
         duopt.setAllowUnicode         ( _orig.isAllowUnicode() );
-        duopt.setDefaultScalarStyle   ( _orig.getDefaultScalarStyle() );
+        duopt.setDefaultScalarStyle   ( _orig.getDefaultScalarStyle() );    // this is the Quote-config: no-quote, single-quote, double-quote
         duopt.setIndent               ( _orig.getIndent() );
         duopt.setIndicatorIndent      ( _orig.getIndicatorIndent() );
         duopt.setPrettyFlow           ( _orig.isPrettyFlow() );
@@ -369,16 +692,16 @@ public class NodeTools {
 
         try {
             final GenericYAMLScanner yamlscanner = new GenericYAMLScanner( false );
-            yamlscanner.setYamlLibrary( YAML_Libraries.NodeImpl_Library );
+            yamlscanner.setYAMLLibrary( YAML_Libraries.SNAKEYAML_Library );
             final GenericYAMLWriter yamlwriter = new GenericYAMLWriter( false );
-            yamlwriter.setYamlLibrary( YAML_Libraries.NodeImpl_Library );
-            final DumperOptions dumperopts = GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter(); // ATTENTION: This Default DumperOptions is JUST FINE
+            yamlwriter.setYAMLLibrary( YAML_Libraries.SNAKEYAML_Library );
+            // final DumperOptions dumperopts = NodeTools.getDefault DumperOptions(); // ATTENTION: This Default DumperOptions is JUST FINE
                                             // Since we are only deep-cloning, the quoteStyle and blockStyle will be automatically represented in STRING FORM.
     
             final java.io.StringWriter strwrtr3 = new java.io.StringWriter();
 
-            yamlwriter.prepare( strwrtr3, dumperopts );
-            yamlwriter.write( _orig, dumperopts );
+            yamlwriter.prepare( strwrtr3, NodeTools.getDefaultDumperOptions() );
+            yamlwriter.write  ( _orig,    NodeTools.getDefaultDumperOptions() );
             yamlwriter.close();
 // System.out.println( HDR +" created new YAML-String\n" + strwrtr3.toString() +"\n" );
 
@@ -395,6 +718,10 @@ public class NodeTools {
             throw e;
         }
     } // function
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -620,7 +947,7 @@ public class NodeTools {
     //                 throws java.io.IOException, Exception
     // {
     //     final LinkedHashMap<String, Object> map = JSONString2Map(_jsonString);
-    //     final org.yaml.snakeyaml.nodes.Node n = NodeTools.Map2Node( this.verbose, map, GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter() );
+    //     final org.yaml.snakeyaml.nodes.Node n = NodeTools.Map2Node( this.verbose, map, NodeTools.getDefaultDumperOptions() );
     //     return n;
     // }
 
@@ -630,13 +957,13 @@ public class NodeTools {
 
     /**
      * org.yaml.snakeyaml.DumperOptions (like all SnakeYaml classes) does NOT have a toString() and does NOT implement java.io.Streamable.  Hence this static method to show what's inside a DumperOptions object.
-     * @param dumperopt a non-null object.  Null will cause NullPointerException
+     * @param _dumperopt a non-null object.  Null will cause NullPointerException
      */
-    public static final void printDumperOptions( DumperOptions dumperopt ) {
+    public static final void printDumperOptions( DumperOptions _dumperopt ) {
         System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 Enums.ScalarStyle="+ org.ASUX.yaml.Enums.ScalarStyle.list(" / ") );
-        System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 this.dumperoptions.getDefaultScalarStyle()="+ dumperopt.getDefaultScalarStyle() );
-        System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 this.dumperoptions.getDefaultScalarStyle().getChar()="+ dumperopt.getDefaultScalarStyle().getChar() );
-        System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 2 this.dumperoptions.getDefaultFlowStyle()="+ dumperopt.getDefaultFlowStyle() );
+        System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 this.dumperoptions.getDefaultScalarStyle()="+ _dumperopt.getDefaultScalarStyle() );
+        System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 this.dumperoptions.getDefaultScalarStyle().getChar()="+ _dumperopt.getDefaultScalarStyle().getChar() );
+        System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 2 this.dumperoptions.getDefaultFlowStyle()="+ _dumperopt.getDefaultFlowStyle() );
     }
 
     //==============================================================================
@@ -670,9 +997,9 @@ public class NodeTools {
     public static void main( String[] args ) {
         // try {
         //     final GenericYAMLScanner rdr = new GenericYAMLScanner(true);
-        //     rdr.setYamlLibrary( YAML_Libraries.ESOTERICSOFTWARE_Library );
+        //     rdr.setYamlLibrary( YAML_Libraries.SNAKEYAML_Library );
         //     final GenericYAMLWriter wr = new GenericYAMLWriter(true);
-        //     wr.setYamlLibrary( YAML_Libraries.ESOTERICSOFTWARE_Library );
+        //     wr.setYamlLibrary( YAML_Libraries.SNAKEYAML_Library );
         //     final Tools tools = new Tools( true );
         //     // tools.cmdInvoker
         //     // LinkedHashMap<String, Object> map = tools.JSONS tring 2Node????????????????????????????????????????????( args[0] );
