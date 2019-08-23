@@ -35,6 +35,8 @@ package org.ASUX.YAML.NodeImpl;
 import org.ASUX.common.Debug;
 
 import org.ASUX.yaml.YAMLPath;
+import org.ASUX.yaml.YAML_Libraries;
+import org.ASUX.yaml.YAMLImplementation;
 
 import java.io.InputStreamReader;
 import java.io.FileInputStream;
@@ -54,7 +56,7 @@ import org.yaml.snakeyaml.nodes.MappingNode;
 import org.yaml.snakeyaml.nodes.SequenceNode;
 import org.yaml.snakeyaml.constructor.Constructor;
 import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/error/Mark.java
-import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -97,39 +99,105 @@ public class Cmd {
     //=================================================================================
 
     /**
+     *  <p>This is the "ignition" for starting up the YAML-implementation and associated Factory-methods.</p>
+     *  <p>This method is either invoked by {@link #main(String[])} (in response to end-user's cmdline) or by {@link org.ASUX.yaml.YAMLImplementation#startupYAMLImplementationFactory} (by Non-YAML github projects like org.ASUX.AWS-SDK or org.ASUX.AWS.CFN)</p>
+     *  @param <T> either SnakeYAML's Node.class or LinkedHashMap&lt;String,Object&gt; for EsotericSoftware's YAML implementation
+     *  @param _cmdLineArgs Everything passed as commandline arguments to the Java program {@link org.ASUX.yaml.CmdLineArgsCommon}
+     *  @param _cmdInvoker NotNull instance (invariably a subclass of {@link org.ASUX.yaml.CmdInvoker})
+     *  @return a NotNull reference to a subclass of {@link org.ASUX.yaml.YAMLImplementation} (specifically {@link org.ASUX.YAML.NodeImpl.NodeTools})
+     *  @throws Exception Any potential thrown while starting up the YAML implementations (Example: {@link org.ASUX.yaml.YAMLImplementation#startupYAMLImplementationFactory} )
+     */
+    public static <T> org.ASUX.yaml.YAMLImplementation startYAMLImplementation(
+                                final org.ASUX.yaml.CmdLineArgsCommon _cmdLineArgs, final org.ASUX.yaml.CmdInvoker<T> _cmdInvoker ) throws Exception
+    {   final String HDR = CLASSNAME +": startYAMLImplementation("+ _cmdLineArgs +"): ";
+
+        assertTrue( YAML_Libraries.isNodeImpl( _cmdLineArgs.getYAMLLibrary() ) );
+
+        // first ensure key instance and class variables are NOT NULL
+        if ( NodeTools.getDefaultDumperOptions() == null )
+            NodeTools.setDefaultDumperOptions( GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter() );
+
+        // create new instance of YAML-implementator code
+        final NodeTools nt = new NodeTools( _cmdLineArgs.verbose );
+        nt.setYAMLScanner( new GenericYAMLScanner( _cmdLineArgs.verbose ) );
+        nt.setYAMLWriter ( new GenericYAMLWriter ( _cmdLineArgs.verbose ) );
+        nt.getYAMLScanner().setYAMLLibrary( YAML_Libraries.SNAKEYAML_Library );
+        nt.getYAMLWriter().setYAMLLibrary ( YAML_Libraries.SNAKEYAML_Library );
+        nt.setDumperOptions( NodeTools.getDefaultDumperOptions() );
+
+        // Store this YAML-implementor code .. for anyone to 'lookup' (including 20 lines below at the bottom of this method itself)
+        YAMLImplementation.use( YAML_Libraries.SNAKEYAML_Library, nt ); // telling YAMLImplementation-factory about the specific YAMLImplementation Implementation
+        YAMLImplementation.use( YAML_Libraries.NodeImpl_Library,  nt ); // telling YAMLImplementation-factory about the specific YAMLImplementation Implementation
+        // Mote: 'SNAKEYAML_Library' and 'NodeImpl_Library' are equivalent
+
+        //----------------------------------------
+        // Configure based on command-line options provided by user
+        switch( _cmdLineArgs.getQuoteType() ) {
+            case DOUBLE_QUOTED: nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.DOUBLE_QUOTED );  break;
+            case SINGLE_QUOTED: nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.SINGLE_QUOTED );  break;
+            case LITERAL:       nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.LITERAL );        break;
+            case FOLDED:        nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
+            case PLAIN:         nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.PLAIN );          break;
+            default:            nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
+        }
+
+        if (_cmdLineArgs.verbose) org.ASUX.YAML.NodeImpl.NodeTools.printDumperOptions( nt.getDumperOptions() );
+
+        //----------------------------------------
+        // tell the YAMLImplementation FACTORY about the new implementation
+        final YAMLImplementation<Node> yi = YAMLImplementation.create( _cmdLineArgs.verbose, YAML_Libraries.SNAKEYAML_Library );
+
+        // ensure the YAML implementation defined/specified (all of the above) is now known the rest of the code-base
+        _cmdInvoker.setYAMLImplementation( (YAMLImplementation<T>) yi );
+        assertTrue( yi == nt ); // we should get back the same reference, that we 'stored' via use() invocation - about 20 lines above.
+        if (_cmdLineArgs.verbose) System.out.println( HDR +" set YAML-Library to [" + _cmdLineArgs.getYAMLLibrary() );
+        if (_cmdLineArgs.verbose) System.out.println( HDR +"while _cmdInvoker.getYAMLImplementation().getYAMLLibrary() =[" + _cmdInvoker.getYAMLImplementation().getYAMLLibrary() + "]" );
+
+        return _cmdInvoker.getYAMLImplementation();
+    }
+
+    //=================================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=================================================================================
+
+    /**
      * This is NOT testing code. It's actual means by which user's command line arguments are read and processed
      * @param args user's commandline arguments
      */
     public static void main( String[] args )
     {
         final String HDR = CLASSNAME + ": main(String[]): ";
-        // org.ASUX.yaml.CmdLineArgsBasic cmdLineArgsBasic = null;
         org.ASUX.yaml.CmdLineArgs cmdlineargs = null;
         final java.io.StringWriter stdoutSurrogate = new java.io.StringWriter();
 
         try {
             cmdlineargs = CmdLineArgs.create( args );
 
+            // Step 1: create 'cmdinvoker'
             org.ASUX.YAML.NodeImpl.CmdInvoker cmdinvoker = new org.ASUX.YAML.NodeImpl.CmdInvoker( cmdlineargs.verbose, cmdlineargs.showStats );
             if (cmdlineargs.verbose) System.out.println( HDR +"getting started with cmdline args = " + cmdlineargs + " " );
 
-            cmdinvoker.setYamlLibrary( cmdlineargs.getYAMLLibrary() );
-            if (cmdlineargs.verbose) System.out.println( HDR +" set YAML-Library to [" + cmdlineargs.getYAMLLibrary() + " and [" + cmdinvoker.getYamlLibrary() + "]" );
+            // Steps 2 & 3: Startup the factory for YAML-implementation.
+            Cmd.startYAMLImplementation( cmdlineargs, cmdinvoker );
+            // For other projects in the org.ASUX family, especially those that do NOT want to know the YAML-implementation.. use the following line instead.
+            // YAMLImplementation<Node> startupYAMLImplementationFactory( cmdlineargs.getYAMLLibrary(), _cmdLineArgs, _cmdInvoker );
 
             //=============================================================
+            // Step 4 on.. start processing...
+
             // read input, whether it's System.in -or- an actual input-file
             if (cmdlineargs.verbose) System.out.println( HDR +" about to load file: " + cmdlineargs.inputFilePath );
             final java.io.InputStream is1 = ( cmdlineargs.inputFilePath.equals("-") ) ? System.in
                     : new java.io.FileInputStream(cmdlineargs.inputFilePath);
             final java.io.Reader filereader = new java.io.InputStreamReader(is1);
 
-            final Node inputNode = cmdinvoker.getYamlScanner().load( filereader );
+            final Node inputNode = cmdinvoker.getYAMLImplementation().load( filereader );
 
             if (cmdlineargs.verbose) System.out.println( HDR +" loaded data = " + inputNode + " " );
             if (cmdlineargs.verbose) System.out.println( HDR +" loaded data of type [" + inputNode.getType() + "]" );
 
             // -----------------------
-            // PRE-YAML processing
+            // PRE YAML-Cmd processing
             switch ( cmdlineargs.cmdType ) {
                 case READ:
                 case LIST:
@@ -146,7 +214,8 @@ public class Cmd {
             //======================================================================
             // run the command requested by user
             final Object outputAsIs = cmdinvoker.processCommand( cmdlineargs, inputNode );
-            final Object output = (outputAsIs != null) ? outputAsIs : NodeTools.getEmptyYAML( GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter() );
+            final NodeTools nodetools =(NodeTools) cmdinvoker.getYAMLImplementation();
+            final Object output = (outputAsIs != null) ? outputAsIs : NodeTools.getEmptyYAML( nodetools.getDumperOptions() );
             if (cmdlineargs.verbose) System.out.println( HDR +" processing of entire command returned [" + (output.getClass().getName()) + "]" );
 
             //======================================================================
@@ -154,13 +223,12 @@ public class Cmd {
                 ? stdoutSurrogate // new java.io.FileWriter(TMP FILE)
                 : new java.io.FileWriter(cmdlineargs.outputFilePath);
 
-            final GenericYAMLWriter writer = cmdinvoker.getYamlWriter();
-            final DumperOptions dumperopts = cmdinvoker.dumperopt;
-            if (cmdlineargs.verbose) System.out.println( HDR +" GenericYAMLWriter writer has YAML-Library set to [" + writer.getYamlLibrary() + "]" );
-            writer.prepare( javawriter, dumperopts );
+            // final GenericYAMLWriter writer = cmdinvoker.getYamlWriter();
+            // if (cmdlineargs.verbose) System.out.println( HDR +" GenericYAMLWriter writer has YAML-Library set to [" + writer.getYamlLibrary() + "]" );
+            // cmdinvoker.getYAMLImplementation().prepare( javawriter, cmdinvoker.dumperopt );
 
             //======================================================================
-            // post-completion of YAML processing
+            // post-completion of YAML-Cmd processing
             if ( output != null ) {
                 switch ( cmdlineargs.cmdType ) {
                     case READ:
@@ -185,7 +253,7 @@ public class Cmd {
                         } // outermost if
 
                         if (cmdlineargs.verbose) System.out.println( HDR +" final output is of type " + humanFriendlyOutput.getClass().getName() + "]" );
-                        writer.write( humanFriendlyOutput, dumperopts );
+                        cmdinvoker.getYAMLImplementation().write( javawriter, humanFriendlyOutput );
                         break;
                 } // switch
             } // if output != null
@@ -195,9 +263,9 @@ public class Cmd {
             if ( cmdlineargs.outputFilePath.equals("-") ) {
                 // if we're writing to STDOUT/System.out ..
                 if ( output == null ) System.out.println("null");
-                if ( writer != null ) writer.close(); // Yes! Even for stdout/System.out .. we need to call close(). This is driven by one the YAML libraries (eso teric soft ware)
+                cmdinvoker.getYAMLImplementation().close(); // Yes! Even for stdout/System.out .. we need to call close(). This is driven by one the YAML libraries (eso teric soft ware)
             } else {
-                if ( writer != null ) writer.close(); // close the actual file.
+                cmdinvoker.getYAMLImplementation().close(); // close the actual file.
             }
             stdoutSurrogate.flush();
 
