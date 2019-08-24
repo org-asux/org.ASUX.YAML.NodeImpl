@@ -413,12 +413,21 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
 
             for( int ix=yp.yamlElemArr.length - 1;   ix > yp.index() ; ix-- ) {
                 // !!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!! This iterator / for-loop counts DOWN.
-                final ScalarNode keySN = new ScalarNode( Tag.STR,     yp.yamlElemArr[ix],     null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
-                final List<NodeTuple> nt = new LinkedList<NodeTuple>();
-                nt.add ( new NodeTuple( keySN, prevchildelem ) ); // Even if 'prevchildelem' is 'EmptyYAML' this is OK.
-                final Node newMN = new MappingNode( Tag.MAP, false,    nt,    null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
-                if ( this.verbose ) System.out.println( HDR +": added the NEW path @ "+ ix +" yp.yamlElemArr[ix]="+ yp.yamlElemArr[ix] +"  newMN= ["+ newMN +"]" );
-                prevchildelem = newMN;
+                if ( yp.yamlElemArr[ix].matches("\\[[0-9][0-9]*\\]") ) { // If .. a 1-2 digit number between square-brackets .. ..
+                    // we'll ignore the actual value of the 1-2 digit number.  Assumes it's === [0]
+                    final java.util.LinkedList<Node> seqs = new java.util.LinkedList<Node>();
+                    seqs.add( prevchildelem );
+                    final SequenceNode seqN = new SequenceNode( Tag.SEQ, false, seqs,  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
+                    if ( this.verbose ) System.out.println( HDR +": added the NEW ARRAY-ELEMENT @ depth="+ ix +" yp.yamlElemArr[ix]="+ yp.yamlElemArr[ix] +"]" );
+                    prevchildelem = seqN;
+                } else {
+                    final ScalarNode keySN = new ScalarNode( Tag.STR,     yp.yamlElemArr[ix],     null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
+                    final List<NodeTuple> nt = new LinkedList<NodeTuple>();
+                    nt.add ( new NodeTuple( keySN, prevchildelem ) ); // Even if 'prevchildelem' is 'EmptyYAML' this is OK.
+                    final Node newMN = new MappingNode( Tag.MAP, false,    nt,    null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
+                    if ( this.verbose ) System.out.println( HDR +": added the NEW MAPPING-Node path @ depth="+ ix +" yp.yamlElemArr[ix]="+ yp.yamlElemArr[ix] +"  newMN= ["+ newMN +"]" );
+                    prevchildelem = newMN;
+                }
             }
 
             // we created an ENTIRE Node-Hierarchy in the FOR loop above.
