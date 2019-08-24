@@ -408,7 +408,8 @@ public abstract class AbstractYamlEntryProcessor {
             // final String valtag = scalarN.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
 
             if (   !   yamlPElemPatt.matcher( scalarN.getValue() ).matches() || _yamlPath.hasNext() ) { // then it's --NOT-- an end2end match
-                _end2EndPaths.removeLast();
+                if ( _end2EndPaths.size() > 0 )
+                    _end2EndPaths.removeLast();
                 // drop out of nested-IFs and continue below. .. .. to bottom of this method
             } else {
                 // yeah! We found a full end2end match!  Also, No more recursion is feasible.
