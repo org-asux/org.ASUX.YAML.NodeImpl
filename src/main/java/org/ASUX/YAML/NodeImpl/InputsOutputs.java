@@ -233,17 +233,40 @@ public class InputsOutputs {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
 
+
     /**
-     * This function saved _input to a reference to a file (_dest parameter must be prefixed with an '@').. or, to a string prefixed with '!' (in which it's saved into Working RAM, Not to disk/file)
-     * @param _dest a javalang.String value - either a filename (must be prefixed with '@'), or a reference to a (new) property-variable within a Batch-file execution (must be prefixed with a '!')
-     * @param _input the object to be saved using the reference provided in _dest paramater
-     * @param _memoryAndContext a non-null reference to {@link org.ASUX.yaml.MemoryAndContext}.  CmdInvoker can provide this reference.
-     * @param _YAMLWriter a non-null reference to {@link GenericYAMLWriter}.  CmdInvoker can provide this reference.
-     * @param _dumperopt a non-null reference to org.yaml.snakeyaml.DumperOptions instance.  CmdInvoker can provide this reference.
-     * @param _verbose Whether you want deluge of debug-output onto System.out.
-     * @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
-     * @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
-     * @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
+     *  This function saved _input to a reference to a file (_dest parameter must be prefixed with an '@').. or, to a string prefixed with '!' (in which it's saved into Working RAM, Not to disk/file)
+     *  @param _dest a javalang.String value - either a filename (must be prefixed with '@'), or a reference to a (new) property-variable within a Batch-file execution (must be prefixed with a '!')
+     *  @param _input the object to be saved using the reference provided in _dest paramater
+     *  @param _memoryAndContext a non-null reference to {@link org.ASUX.yaml.MemoryAndContext}.  CmdInvoker can provide this reference.
+     *  @param _yamlImplementation a NotNull reference to {@link org.ASUX.YAML.NodeImpl.NodeTools})
+     *  @param _verbose Whether you want deluge of debug-output onto System.out.
+     *  @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
+     *  @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
+     *  @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
+     */
+    public static final void saveDataIntoReference( final String _dest, final Object _input,
+                            final MemoryAndContext _memoryAndContext, final NodeTools _yamlImplementation,
+                            final boolean _verbose )
+                            throws FileNotFoundException, IOException, Exception {
+        saveDataIntoReference( _dest, _input, _memoryAndContext, _yamlImplementation.getYAMLWriter(), _yamlImplementation.getDumperOptions(), _verbose );
+    }
+
+    //==============================================================================
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==============================================================================
+
+    /**
+     *  This function saved _input to a reference to a file (_dest parameter must be prefixed with an '@').. or, to a string prefixed with '!' (in which it's saved into Working RAM, Not to disk/file)
+     *  @param _dest a javalang.String value - either a filename (must be prefixed with '@'), or a reference to a (new) property-variable within a Batch-file execution (must be prefixed with a '!')
+     *  @param _input the object to be saved using the reference provided in _dest paramater
+     *  @param _memoryAndContext a non-null reference to {@link org.ASUX.yaml.MemoryAndContext}.  CmdInvoker can provide this reference.
+     *  @param _YAMLWriter a non-null reference to {@link GenericYAMLWriter}.  CmdInvoker can provide this reference.
+     *  @param _dumperopt a non-null reference to org.yaml.snakeyaml.DumperOptions instance.  CmdInvoker can provide this reference.
+     *  @param _verbose Whether you want deluge of debug-output onto System.out.
+     *  @throws FileNotFoundException if the filenames within _cmdLineArgs do NOT exist
+     *  @throws IOException if the filenames within _cmdLineArgs give any sort of read/write troubles
+     *  @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
     public static final void saveDataIntoReference( final String _dest, final Object _input,
                             final MemoryAndContext _memoryAndContext, final GenericYAMLWriter _YAMLWriter, final DumperOptions _dumperopt,
