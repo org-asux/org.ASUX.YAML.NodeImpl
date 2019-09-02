@@ -11,13 +11,13 @@
 	<packaging>jar</packaging>
 
     <inceptionYear>2019</inceptionYear>
-    <description>Cmdline interface to process YAML files, leveraging the brilliantly robust gitbub project  github.com:esotericsoftware/yamlbeans.git (which is a Java object graphs, to and from YAML)</description>
-	<url>https://ASUX.org</url>
+    <description>Cmdline interface to process YAML files, leveraging the brilliantly robust SnakeYAML Java-implementation of YAML-Parsing and YAML-Generation (http://yaml.org)</description>
+	<url>https://github.com/org-asux/org.ASUX.YAML.NodeImpl</url>
 
 	<parent>
 		<groupId>org.asux</groupId>
 		<artifactId>MavenCentralRepo-TopLevelPOM</artifactId>
-		<version>2.0</version>
+		<version>3.0</version>
 		<!-- <relativePath>pom-MavenCentralRepo-TopLevelParent.xml</relativePath> -->
 		<!-- EVEN tho' PARENT-POM is in .M2 REPOSITORY... I'm forced to use RELATIVEPATH.  The reason?  The following MAVEN output -->
 <!--
@@ -78,10 +78,10 @@
             <groupId>org.asux</groupId>
             <artifactId>yaml</artifactId>
         </dependency>
+        <!-- JUNIT5 junit5 -->
         <dependency>
-            <!-- scope>test</scope -->
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
         </dependency>
         <!-- https://mvnrepository.com/artifact/commons-cli/commons-cli -->
         <dependency>
