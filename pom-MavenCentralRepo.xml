@@ -18,7 +18,7 @@
 		<groupId>org.asux</groupId>
 		<artifactId>MavenCentralRepo-TopLevelPOM</artifactId>
 		<version>3.1</version>
-		<!-- <relativePath>pom-MavenCentralRepo-TopLevelParent.xml</relativePath> -->
+		<relativePath>pom-MavenCentralRepo-TopLevelParent.xml</relativePath>
 		<!-- EVEN tho' PARENT-POM is in .M2 REPOSITORY... I'm forced to use RELATIVEPATH.  The reason?  The following MAVEN output -->
 <!--
 [WARNING] Some problems were encountered while building the effective model for org.asux:common:jar:1.0
