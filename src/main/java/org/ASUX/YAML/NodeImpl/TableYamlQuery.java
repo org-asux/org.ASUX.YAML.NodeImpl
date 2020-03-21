@@ -38,11 +38,11 @@ import java.util.regex.*;
 
 import java.util.LinkedList;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+// import java.util.LinkedHashMap;
 
 // https://yaml.org/spec/1.2/spec.html#id2762107
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.composer.Composer;
+// import org.yaml.snakeyaml.Yaml;
+// import org.yaml.snakeyaml.composer.Composer;
 import org.yaml.snakeyaml.nodes.NodeTuple;
 import org.yaml.snakeyaml.nodes.NodeId;
 import org.yaml.snakeyaml.nodes.Node;
@@ -65,11 +65,15 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
 
     public static final String CLASSNAME = TableYamlQuery.class.getName();
 
-    protected String[] tableColumns = new String[]{"UNinitialized", "TableColumns"};
-    private String delimiter = "UNINITIALIZED DELIMITER";
+    /** Should be a NotNull String[] object, where None of the strings are null */
+    protected String[] tableColumns; // = new String[]{"UNinitialized", "TableColumns"};
+    private String delimiter; //  = "UNINITIALIZED DELIMITER";
 
+    /** How many 'row/lines' matches happened.  This value should be identical to this.getOutput.size(). Value obtained using {@link #getCount()}*/
     protected int count;
+    /** By design, this class is supposed to collect a SIMPLE TABULAR arrangement of Strings */
     protected LinkedList< ArrayList<String> > output;
+    /** The _EXACT_ same content as in 'this.output' .. but, this time in SnakeYAML data-model. */
     protected SequenceNode outputAsNode;
 
     //------------------------------------------------------------------------------
@@ -98,7 +102,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
 
         // Sanity check of "_delim"
         try {
-            Pattern p = Pattern.compile(_delim);
+            /* Pattern p = */ Pattern.compile(_delim);
         }catch(PatternSyntaxException e){
             if ( _verbose ) e.printStackTrace(System.err);
             System.err.println( CLASSNAME +" Constructor: Invalid delimiter-pattern '"+ _delim +"' provided to constructor "+ e );
@@ -117,10 +121,9 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
             final String errMsg = CLASSNAME +" Constructor: Invalid column # "+ ix +" '"+ col +"' provided to Table-query Command.";
             try {
                 Pattern p = Pattern.compile( org.ASUX.yaml.BatchFileGrammer.REGEXP_NAME );
-                if ( p.matcher( col ).matches() )
-                    continue;
-                else
+                if (  !  p.matcher( col ).matches() ) {
                     throw new Exception( errMsg );
+                }
             }catch(PatternSyntaxException e){
                 if ( _verbose ) e.printStackTrace(System.err);
                 throw new Exception( errMsg );
@@ -137,7 +140,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     public void reset() {
         this.count = 0;
         this.output = new LinkedList<>();
-        this.outputAsNode = new SequenceNode( Tag.SEQ, false, new LinkedList<Node>(),  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
+        this.outputAsNode = new SequenceNode( Tag.SEQ, false, new LinkedList<>(),  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
         // this.tableColumns <-- can ONLY be changed via Constructor, as it's NOT publicly accesible instance-variable, and currently NO setter() exists.
     }
 
@@ -167,73 +170,144 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
             System.out.println("onEnd2EndMatch: _key = ["+ _key +"] _valNode = ["+ _valNode +"]");
         }
 
-        String errmsg = HDR +" For the pattern provided on cmdline for YAML-Path "+ _yamlPath.toString() +" we found [";
+        StringBuilder errMsgBuf = new StringBuilder(HDR + " For the pattern provided on cmdline for YAML-Path " + _yamlPath.toString() + " we found [");
         for( String s: _end2EndPaths )
-            errmsg += s+this.delimiter;
+            errMsgBuf.append(s).append(this.delimiter);
+        final String errMsg = errMsgBuf.toString();
 
         //-------------------------------------
-        // local Class - so I can create a passive "local function"
+        //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        //-------------------------------------
+
+        // local Class - so I can create a "local function-method", without passing too many variables to the function-method
         class PullTableElemsFromMap {
-            public void go( final boolean _verbose, final MappingNode _mapnode, final String[] _tableColumns, final String _errmsg ) throws TableCmdException {
+            public void go( final MappingNode _mapnode, final String[] _tableColumns, final String _errmsg ) throws Exception {
                 final String HDR2 = HDR +": PullTableElemsFromMap.go() ";
-                final ArrayList<String> tablerow = new ArrayList<>();
-                final java.util.List<Node> rowAsNode = new LinkedList<Node>();
+                final ArrayList<String> tableRow = new ArrayList<>();
+                final java.util.List<Node> tableRowNodeObjs = new LinkedList<>();
                 final java.util.List<NodeTuple> tuples = _mapnode.getValue();
                 // !!!!!!!! ATTENTION !!!!!!! The outermost for-loop must be over _tableColumns.  That is the ONLY way we can throw an Exception stating: canNOT find column
+                // OUTER FOR LOOP:
                 for (int ix=0; ix < _tableColumns.length; ix++ ) {
+
                     final String col = _tableColumns[ix];
-                    if ( _verbose ) System.out.println( HDR2 +": Going thru Column # "+ ix +" for key="+ col +" = "+ _mapnode  );
-                    boolean bFound = false;
-                    INNERFORLOOP:
+                    if ( verbose ) System.out.println( HDR2 +": Going thru Column # "+ ix +" for key="+ col +" = "+ _mapnode  );
+
+                    final String subDelimiter = "/";
+                    if ( verbose ) System.out.println( HDR2 +" col='"+ col +"' and contains="+ col.contains( subDelimiter ) );
+                    if ( col.contains( subDelimiter ) ) {
+                        // It means.. We have a sophisticated 'path' and NOT just a column-name as the value for 'col'
+                        if ( verbose ) System.out.println( NodeTools.Node2YAMLString(_mapnode));
+// ATTENTION: the delimiter to split-up 'col' into substrings is hardcoded as '/'
+// ATTENTION: In contrast, 'col' was parsed out of '_tableColumns' using 'delimiter' variable.  OBVIOUSLY, we can't use the same 'delimiter' variable.
+
+                        final YAMLPath yp = new YAMLPath( verbose, col, subDelimiter ); // convert something like '../sibling' into a YAMLPath object
+                        final ReadYamlEntry readYE = new ReadYamlEntry( verbose, /* showStats */ false, dumperoptions );
+
+                        if ( yp.yamlElemArr.length == 1 && "..".equals( yp.yamlElemArr[0] ) ) {
+                            // "_parentNode" won't fit into the expected data-types within the "output" instance-variable of the main-class of this file
+                            throw new TableCmdException( _errmsg + "].  (#1) At that location canNOT give you a scalar @ '"+ col +"' provided to Table-query Command." );
+
+                        } else if ( yp.yamlElemArr.length > 1 && "..".equals(yp.yamlElemArr[0]) ) {
+                            // throw new TableCmdException( _errmsg + "].  (#2) Unimplemented support for '..' PREFIX within YAML-Path provided '"+ col +"." );
+
+                            // strip out the initial '..' in the YAML-path denoted by 'col'
+                            // Lookup up within parentNode
+                            yp.hasNext();
+                            if ( verbose ) System.out.println( HDR2 +" yp='"+ yp +"' and yp.getSuffix()="+ yp.getSuffix() );
+
+                            readYE.searchYamlForPattern( _parentNode, yp.getSuffix(), subDelimiter );
+                            final SequenceNode seqN1 = readYE.getOutput();
+                            // The lookup @ 'col' a.k.a better be a ScalarNode only.  Obviously, by definition, a single ScalarMode only.
+                            if ( seqN1.getValue().size() != 1 ||   !  (seqN1.getValue().get(0) instanceof ScalarNode)   ) {
+                                throw new TableCmdException( _errmsg + "].  (#2) At that location canNOT pick a SINGLE scalar @ '"+ col +"' provided to Table-query Command." );
+                            } else {
+                                final ScalarNode sn1 = (ScalarNode) seqN1.getValue().get(0);
+                                tableRow.add( sn1.getValue() );
+                                final ScalarNode newSN = new ScalarNode( Tag.STR,     sn1.getValue(),     null, null, dumperoptions.getDefaultScalarStyle() );
+                                tableRowNodeObjs.add( newSN );
+                            } // if-else (above 5 lines)
+
+                        } else {
+                            // the YAML-path denoted by 'col' does _NOT_ begin with '..'
+                            readYE.recursiveSearch( _mapnode,   yp,  null,  new LinkedList<>() );
+                            final SequenceNode seqN2 = readYE.getOutput();
+                            if ( verbose ) System.out.println( "_mapnode = "+ NodeTools.Node2YAMLString( _mapnode ) + "\n" );
+                            if ( verbose ) System.out.println( "yp = '"+ yp +"'\nseqN2 = "+ NodeTools.Node2YAMLString( seqN2 ) + "\n" );
+                            if ( seqN2 == null || seqN2.getValue().size() != 1 ||    !  (seqN2.getValue().get(0) instanceof ScalarNode)   ) {
+                                throw new TableCmdException( _errmsg + "]. (#3)  At that location canNOT pick a SINGLE scalar @ '"+ col +"' provided to Table-query Command." );
+                            } else {
+                                final ScalarNode sn2 = (ScalarNode) seqN2.getValue().get(0);
+                                tableRow.add( sn2.getValue() );
+                                // final ScalarNode newSN = new ScalarNode( Tag.STR,     sn2.getValue(),     null, null, dumperoptions.getDefaultScalarStyle() );
+                                // tableRowNodeObjs.add( newSN );
+                            }
+                        }
+
+                        continue; // OUTER FOR LOOP;
+                    } // if col.contains(subDelimiter)
+
+                    boolean bFoundColumn = false;
+                    // INNER FOR LOOP:
                     for( NodeTuple kv: tuples ) {
                         final Node keyN = kv.getKeyNode();
                         assertTrue( keyN instanceof ScalarNode );
                         final ScalarNode scalarKeyN = (ScalarNode) keyN;
                         final String keyAsStr = scalarKeyN.getValue();
-                        assertTrue( keyAsStr != null );
+                        assertNotNull( keyAsStr );
                         final Node valN = kv.getValueNode();
-                        if ( _verbose ) System.out.println( HDR2 +" checking on [LHS] !keyTag : RHS = ["+ keyN + "] !"+ scalarKeyN.getTag().getValue() + " : "+ valN + " ;" );
+                        if ( verbose ) System.out.println( HDR2 +" checking on [LHS] !keyTag : RHS = ["+ keyN + "] !"+ scalarKeyN.getTag().getValue() + " : "+ valN + " ;" );
 
-                        if ( valN instanceof ScalarNode && valN.getNodeId() == NodeId.scalar ) {
-                            final ScalarNode scalarValN = (ScalarNode) valN;
-                            if ( col.equals(keyAsStr) ) {
-                                if ( _verbose ) System.out.println( HDR2 +" found LHS, keyTag & RHS = ["+ keyN + "] !"+ scalarKeyN.getTag().getValue() + " : "+ scalarValN.getValue() + " ;" );
-                                tablerow.add( scalarValN.getValue() );
-                                final ScalarNode newSN = new ScalarNode( Tag.STR,     scalarValN.getValue(),     null, null, dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
-                                rowAsNode.add( newSN );
-                                bFound = true;
-                                break INNERFORLOOP; // break inner for-loop
+                        // Check if 'col' matches one of the keys under parentNode
+                        if ( col.equals(keyAsStr) ) {
+                            if ( valN instanceof ScalarNode && valN.getNodeId() == NodeId.scalar ) {
+                                final ScalarNode scalarValN = (ScalarNode) valN;
+                                if ( verbose ) System.out.println( HDR2 +" found LHS, keyTag & RHS = ["+ keyN + "] !"+ scalarKeyN.getTag().getValue() + " : "+ scalarValN.getValue() + " ;" );
+                                tableRow.add( scalarValN.getValue() );
+                                final ScalarNode newSN = new ScalarNode( Tag.STR,     scalarValN.getValue(),     null, null, dumperoptions.getDefaultScalarStyle() );
+                                tableRowNodeObjs.add( newSN );
+                                bFoundColumn = true;
+                                break; // INNER FOR LOOP; // break inner for-loop
                             } else {
-                            }
-                        } else {
-                            final String s = _errmsg + "].  At that location canNOT find SIMPLE-PAIR-of-SCALAR @ key= "+ keyAsStr +". Instead found '"+ valN +"' provided to Table-query Command.";
-                            if ( _verbose ) System.out.println( HDR + s );
-    // ?????????????? Need a cmdline-flag that gives user the option of gracefully returning KVPairs, instead of throwing Exception (next line)
-                            throw new TableCmdException( _errmsg + "].  At that location canNOT find SIMPLE-PAIR-of-SCALAR @ key= "+ keyAsStr +". Instead found '"+ valN +"' provided to Table-query Command." );
-                        }
-                    } // inner for loop
+                                final String s = _errmsg + "].  (#4) At that location canNOT find SIMPLE-PAIR-of-SCALAR @ key= "+ keyAsStr +". Instead found '"+ valN +"' provided to Table-query Command.";
+                                if ( verbose ) System.out.println( HDR + s );
+                                // TO-DO: Need a cmdline-flag that gives user the option of gracefully returning KVPairs, instead of throwing Exception (next line)
+                                // throw new TableCmdException( _errmsg + "].  (#4) At that location canNOT find SIMPLE-PAIR-of-SCALAR @ key= "+ keyAsStr +". Instead found '"+ valN +"' provided to Table-query Command." );
+                                throw new TableCmdException( s );
+                            } // if-else whether a scalarNode
+                        } // IF the column-name matched one of the columns/keys
 
-                    if (  !  bFound )
-                        throw new TableCmdException( _errmsg + "].  At that location canNOT find column # "+ ix +" '"+ col +"' provided to Table-query Command." );
-                } // outer for loop
+                    } // inner for-loop - over each kv: tuples
+
+                    if (  !  bFoundColumn ) {
+                        throw new TableCmdException( _errmsg + "].  (#5) At that location canNOT find column # "+ ix +" '"+ col +"' provided to Table-query Command." );
+                    }
+
+                } // outer for-loop (over each column-name that the user wants outputted)
 
                 // if we are here, ALL the 'columns' of the tabular-output were found (if not, an exception is thrown)
                 count ++;
 
-                // this.output wont work within this inline-class
-                output.add( tablerow ); // could be a string or a java.util.LinkedHashMap&lt;String, Object&gt;
+                // ATTENTION !!!! "this.output" won't work within an INLINE-class.  So, hope you realize "output" refers to the Java-class that this file is about.
+                output.add( tableRow ); // could be a string or a java.util.LinkedHashMap&lt;String, Object&gt;
 
-                final SequenceNode tableRowAsNode = new SequenceNode( Tag.SEQ, false, rowAsNode,  null, null, dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
-                final java.util.List<Node> seqs = outputAsNode.getValue();   // 'this.outputAsNode' wont compile within this inline-class
+                final SequenceNode tableRowAsNode = new SequenceNode( Tag.SEQ, false, tableRowNodeObjs,  null, null, dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
+                // NOTE: cannot write 'this.outputAsNode' - in line below.  As this line of code is within a temporary inner-class
+                final java.util.List<Node> seqs = outputAsNode.getValue();   // FYI: 'this.outputAsNode' wont compile within this inline-class
                 seqs.add( tableRowAsNode );
-            } // go()
+
+            } // go() function
         } // local class PullTableElemsFromMap
+
         //-------------------------------------
-        final ArrayList<String> tablerow = new ArrayList<>();
-        final java.util.List<Node> rowAsNode = new LinkedList<Node>();
+        //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        //-------------------------------------
+
+        // final ArrayList<String> tablerow = new ArrayList<>();
+        // final java.util.List<Node> row As Node = new LinkedList<Node>();
         if ( _valNode instanceof MappingNode ) {
             final MappingNode mapN = (MappingNode) _valNode;
-            new PullTableElemsFromMap().go( this.verbose, mapN, this.tableColumns, errmsg );
+            new PullTableElemsFromMap().go( mapN, this.tableColumns, errMsg ); // see inner class definition above
         // } else if ( _valNode instanceof Node ) {
         //      = (Node) _valNode;
         } else if ( _valNode instanceof SequenceNode ) {
@@ -242,13 +316,13 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
             for( Node node: listOfNodes ) {
                 if ( node instanceof MappingNode && node.getNodeId() == NodeId.mapping ) {
                     final MappingNode map2N = (MappingNode) node;
-                    new PullTableElemsFromMap().go( this.verbose, map2N, this.tableColumns, errmsg );
+                    new PullTableElemsFromMap().go( map2N, this.tableColumns, errMsg );
                 } else {
-                    throw new TableCmdException( errmsg +"].  At that location canNOT find ANY subelements!  Instead it's of type="+ _valNode.getNodeId() );
+                    throw new TableCmdException( errMsg +"].  (#6) At that location canNOT find ANY subelements!  Instead it's of type="+ _valNode.getNodeId() );
                 }
             } // for
         } else {
-            throw new Exception( errmsg +"]. Searching to a TABULAR content, but found type ["+ _valNode.getClass().getName() +"]  with value = ["+ _valNode +"]");
+            throw new Exception( errMsg +"]. Searching to a TABULAR content, but found type ["+ _valNode.getClass().getName() +"]  with value = ["+ _valNode +"]");
         }
 
         return true;
@@ -272,7 +346,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
      */
     protected void atEndOfInput( final Node _node, final YAMLPath _yamlPath ) throws Exception
     {
-        if ( this.showStats ) System.out.println("Total=" + this.count );
+        if ( super.showStats ) System.out.println("Total=" + this.count );
 
         if ( this.verbose ) {
             // for( ArrayList<String> arr: this.output ) {
@@ -281,14 +355,13 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
             // } // for
             // The above commented code will produce same output as the following for-loop - ONLY if Scalar 2D-array output.  In case the 'cells' in the 'table' are NOT ScalarNodes, the code below does a far better job of producing human-readable debugging-output.
             final java.util.List<Node> seqs = this.outputAsNode.getValue();
-            for ( int ix=0;  ix < seqs.size(); ix ++ ) {
-                final Node seqItemNode = seqs.get(ix); 
-                if ( seqItemNode.getNodeId() == NodeId.scalar && seqItemNode instanceof ScalarNode ) {
+            for (final Node seqItemNode : seqs) {
+                if (seqItemNode.getNodeId() == NodeId.scalar && seqItemNode instanceof ScalarNode) {
                     final ScalarNode scN = (ScalarNode) seqItemNode;
-                    System.out.print( scN +"\t" );
+                    System.out.print(scN + "\t");
                 } else {
                     final String s = NodeTools.Node2YAMLString(seqItemNode);
-                    System.out.println( s );
+                    System.out.println(s);
                 }
             } // for loop
             System.out.println();
@@ -298,7 +371,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     /**
-     * @return the count of how many matches happened.  This value is also = this.getOutput.size()
+     * @return the count of how many 'row/lines' matches happened.  This value is also = this.getOutput.size()
      */
     public int getCount() {
         return this.count;
