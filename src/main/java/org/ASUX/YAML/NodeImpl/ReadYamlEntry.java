@@ -70,6 +70,7 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
      */
     public ReadYamlEntry( final boolean _verbose, final boolean _showStats, final DumperOptions _d ) {
         super( _verbose, _showStats, _d );
+        this.reset();
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
