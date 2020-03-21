@@ -39,13 +39,8 @@ import java.util.LinkedList;
 import java.util.regex.*;
 
 // https://yaml.org/spec/1.2/spec.html#id2762107
-import org.yaml.snakeyaml.nodes.NodeTuple;
-import org.yaml.snakeyaml.nodes.NodeId;
-import org.yaml.snakeyaml.nodes.Node;
-import org.yaml.snakeyaml.nodes.ScalarNode;
-import org.yaml.snakeyaml.nodes.MappingNode;
-import org.yaml.snakeyaml.nodes.SequenceNode;
-import org.yaml.snakeyaml.nodes.Tag;
+import org.yaml.snakeyaml.nodes.*;
+// import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.DumperOptions;
 
 import static org.junit.Assert.*;
@@ -135,6 +130,27 @@ public abstract class AbstractYamlEntryProcessor {
     protected abstract boolean onEnd2EndMatch( final YAMLPath _yamlPath, final Object _key, final Node _keyNode, final Node _valNode, final Node _parentNode, final LinkedList<String> _end2EndPaths ) throws Exception;
 
     //-------------------------------------
+    /** <p>This function will be called when a full/end2end match of a YAML path-expression (that ends in an INDEX) happens.</p>
+     * <p>Example: if the YAML-Path-regexp is <code>paths.*.*.responses.[4]</code> .. then<br>
+     * .. this function will be called __ONLY_IF__ the SequenceNode rooted @  <code>paths./pet.put.responses</code> has 3 or less children.  Note: the index provided is 4.</p>
+     * <p>This method is only useful for 2 specific YAML commands (insert and replace) - that is, specifically the subclasses {@link InsertYamlEntry} and {@link ReplaceYamlEntry}</p>
+     * <p>This is a very specialized function, that supports very rare use-cases.</p>
+     *
+     * <p>Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.</p>
+     *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
+     *  @param _newIndex the index of a YAML-SequenceNode that the user has provided in YAML-Path, but which is > the # of elements of that YAML-SequenceNode
+     *  @param _parentSeqNode Will be a Not-Null reference to a org.yaml.snakeyaml.nodes.SequenceNode instance
+     *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
+     *  @return The concrete sub-class can return false, to STOP any further progress on this partial match
+     *  @throws Exception To allow for sub-classes (Example: see @see org.ASUX.yaml.TableYamlQuery - which will throw if data-issues while trying to query YAML for a nice 2-D tabular output)
+     */
+    protected boolean onEnd2EndMatchNewIndex( final YAMLPath _yamlPath, final int _newIndex, final SequenceNode _parentSeqNode, final LinkedList<String> _end2EndPaths ) throws Exception {
+        final String HDR = CLASSNAME +" onEnd2EndMatchNewIndex("+ _yamlPath +","+ _newIndex +",_parentSeqNode,"+ _end2EndPaths +"): ";
+        if ( this.verbose ) System.out.println( HDR +"Hmmm. Sub-class did not override this method.  SequenceNode Index in YAML-Path for Read/List commands?");
+        return false;
+    }
+
+    //-------------------------------------
     /** <p>This function will be called whenever the YAML path-expression fails to match.</p>
      * <p>This will be called way too often.  It's only interesting if you want a "negative" match scenario (as in show all rows that do Not match)</p>
      *
@@ -179,7 +195,7 @@ public abstract class AbstractYamlEntryProcessor {
         this.reset();
         final LinkedList<String> end2EndPaths = new LinkedList<>();
         this.yp = new YAMLPath( this.verbose, _yamlPathStr, _delim );
-        boolean retval = false;
+        boolean retval;
         if ( YAMLPath.ROOTLEVEL.equals( this.yp.getRaw() ) ) {
             retval = true;
             if ( this.verbose ) System.out.println( CLASSNAME +": searchYamlForPattern("+ _yamlPathStr +"):  Skipping this.recursiveSearch() as the YAML-Path pattern is ROOT-ELEM" );
@@ -203,7 +219,7 @@ public abstract class AbstractYamlEntryProcessor {
      * @ param pass in an object of type LinkedList<String>  (null is ok)
      */
     private LinkedList<String> clone( final LinkedList<String> _orig ) {
-        if ( _orig == null ) return new LinkedList<String> ();
+        if ( _orig == null ) return new LinkedList<> ();
 
         @SuppressWarnings("unchecked")
         final LinkedList<String> clone = (LinkedList<String>) _orig.clone();
@@ -226,7 +242,7 @@ public abstract class AbstractYamlEntryProcessor {
     //==============================================================================
 
     /** <p>This is a RECURSIVE-FUNCTION.  Make sure to pass in the right parameters.</p>
-     *  <p><b>Don't tell me I did NOT warn you!</b>  Use the {@link searchYamlForPattern} function instead.</p>
+     *  <p><b>Don't tell me I did NOT warn you!</b>  Use the {@link #searchYamlForPattern(Node, String, String)} } function instead.</p>
      *  <p>This function returns true, if the invocation (or it's recursion) did find a match (partial or end2end).<br>
      *  For now, I'm Not using the return value ANYWHERE.   Either I will - or - will refactor the return as Void.</p>
      *  @param _node This contains the org.yaml.snakeyaml.nodes.Node (created by SnakeYAML library) containing the entire Tree representing the YAML file.
@@ -242,7 +258,7 @@ public abstract class AbstractYamlEntryProcessor {
     {
         final String HDR = CLASSNAME +" recursiveSearch("+_yamlPath+"): ";
         if ( this.verbose ) System.out.println( HDR +" @ very top: Nulls? _node: "+(_node==null)+" _yamlPath: "+ (_yamlPath==null) +" _end2EndPaths="+ _end2EndPaths +" " );
-        if ( this.verbose ) System.out.println( HDR +" @ very top: checks? _yamlPath.isValid: "+ _yamlPath.isValid +" _yamlPath.hasNext(): "+ _yamlPath.hasNext() +" " );
+        if ( this.verbose && _yamlPath!=null ) System.out.println( HDR +" @ very top: checks? _yamlPath.isValid: "+ _yamlPath.isValid +" _yamlPath.hasNext(): "+ _yamlPath.hasNext() +" " );
         if ( (_node==null) || (_yamlPath==null) ) return true; // returning TRUE helps with a cleaner recursion logic
         if (  ! _yamlPath.isValid ) return false;
         if ( ! _yamlPath.hasNext() ) return true; // YAML path has ended.  So, must be a good thing, as we got this far down the YAML-Path
@@ -252,7 +268,6 @@ public abstract class AbstractYamlEntryProcessor {
         final Pattern yamlPElemPatt = java.util.regex.Pattern.compile( yamlPathElemStr.equals("**") ? ".*" : yamlPathElemStr ); // This should Not throw, per precautions in YAMLPath class
 
         boolean aMatchFound = false;
-        boolean bPartialMatch = false;
 
         // public enum org.yaml.snakeyaml.nodes.NodeId = scalar, sequence, mapping, anchor
         // final NodeId nid = _node.getNodeId(); // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/nodes/NodeId.java
@@ -267,26 +282,27 @@ public abstract class AbstractYamlEntryProcessor {
             final Object rhs = mapNode.getValue(); // for debug-printing purposes ONLY
             final String rhsStr = tuples.toString(); // to make verbose logging code simplified
 
-			if ( this.verbose ) System.out.println( "\n"+ HDR +"tuples= "+ rhsStr.substring(0,rhsStr.length()>361?360:rhsStr.length()) + " " );
+            String rhsStrDump2Output = rhsStr.substring(0, rhsStr.length() > 361 ? 360 : rhsStr.length());
+            if ( this.verbose ) System.out.println( "\n"+ HDR +"tuples= "+ rhsStrDump2Output + " " );
 
             for( NodeTuple kv: tuples ) {
                 final Node keyNode = kv.getKeyNode();
                 assertTrue( keyNode instanceof ScalarNode );
-                @SuppressWarnings("unchecked")
+                // assertTrue( keyNode.getNodeId() == NodeId.scalar ); // if this ass-ert fails, what scenario does that represent?
+                // @SuppressWarnings("unchecked")
                 final ScalarNode scalarKey = (ScalarNode) keyNode;
                 final String keyAsStr = scalarKey.getValue();
-                assertTrue( keyNode.getNodeId() == NodeId.scalar ); // if this ass-ert fails, what scenario does that represent?
                 final String keytag = scalarKey.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
 
                 final Node valNode = kv.getValueNode();
                 final String rhsStr2 = valNode.toString(); // to make verbose logging code simplified
-                if ( this.verbose ) System.out.println( HDR +"found keyAsStr=["+ keyAsStr +"] & LHS, keyTag & RHS = ["+ keyNode + "] !"+ keytag + " : "+ rhsStr.substring(0,rhsStr.length()>361?360:rhsStr.length()) + " ;" );
+                if ( this.verbose ) System.out.println( HDR +"found keyAsStr=["+ keyAsStr +"] & LHS, keyTag & RHS = ["+ keyNode + "] !"+ keytag + " : "+ rhsStr2.substring(0,rhsStr2.length()>361?360:rhsStr2.length()) + " ;" );
 
                 //-----------------
-                boolean hasThisKeyEntryMatched = false;
+                boolean hasThisKeyEntryMatched;
                 boolean hasThisYamlLineLiterallyMatched = ! yamlPathElemStr.equals("**");
                 if ( yamlPathElemStr.equals("**") ) {
-                    hasThisYamlLineLiterallyMatched = false; // redundant
+                    // hasThisYamlLineLiterallyMatched = false; // redundant
                     hasThisKeyEntryMatched = true;
                 } else {
                     hasThisYamlLineLiterallyMatched = yamlPElemPatt.matcher( keyAsStr ).matches();
@@ -300,7 +316,7 @@ public abstract class AbstractYamlEntryProcessor {
                 if ( this.verbose ) System.out.println( HDR +" hasThisKeyEntryMatched="+ hasThisKeyEntryMatched + ", hasThisYamlLineLiterallyMatched="+ hasThisYamlLineLiterallyMatched + " " );
 
                 if ( hasThisKeyEntryMatched ) {
-                    if ( this.verbose ) System.out.println( HDR +" matched("+ hasThisYamlLineLiterallyMatched+ ") '"+ keyNode +"':\t"+ rhsStr.substring(0,rhsStr.length()>361?360:rhsStr.length()) +"\t\t of type '"+rhs.getClass().getName() +"'");
+                    if ( this.verbose ) System.out.println( HDR +" matched("+ hasThisYamlLineLiterallyMatched+ ") '"+ keyNode +"':\t"+ rhsStrDump2Output +"\t\t of type '"+rhs.getClass().getName() +"'");
 
                     _end2EndPaths.add( keyAsStr ); // _end2EndPaths keeps the breadcrumbs
 
@@ -322,10 +338,11 @@ public abstract class AbstractYamlEntryProcessor {
                         aMatchFound = true;
 
                         // let sub-classes determine what to do here
-                        final boolean callbkRet3 = onEnd2EndMatch( _yamlPath, keyAsStr, keyNode, valNode, mapNode, cloneOfE2EPaths ); // location #1 for end2end match
+                        // final boolean callbkRet3 =
+                        onEnd2EndMatch( _yamlPath, keyAsStr, keyNode, valNode, mapNode, cloneOfE2EPaths ); // location #1 for end2end match
 
                         _end2EndPaths.removeLast(); // undo the effect of '_end2EndPaths.add( keyAsStr )' -- see about 20 lines above
-                        if ( this.verbose ) System.out.println( HDR +" End2End Match#1 in YAML-file: "+ _yamlPath.getPrefix() +" "+ keyNode  +":\t"+  rhsStr.substring(0,rhsStr.length()>361?360:rhsStr.length()) +"\t\t type '"+rhs.getClass().getName() +"'");
+                        if ( this.verbose ) System.out.println( HDR +" End2End Match#1 in YAML-file: "+ _yamlPath.getPrefix() +" "+ keyNode  +":\t"+ rhsStrDump2Output +"\t\t type '"+rhs.getClass().getName() +"'");
 
                         // if ( ! callbkRet3 ) continue; // Pretend as if match failed.
                         // continue; // outermost for-loop ( NodeTuple kv: tuples )
@@ -340,14 +357,14 @@ public abstract class AbstractYamlEntryProcessor {
                         final boolean callbkRet2 = onPartialMatch( keyNode, _yamlPath, keyAsStr, mapNode, _end2EndPaths );
                         if ( ! callbkRet2 ) continue; // If so, STOP  any further matching DOWN/BENEATH that partial-match
 
-                        if ( this.verbose ) System.out.println( HDR +" recursing with lookForwardYAMLPath=" + lookForwardYAMLPath +": ... @ YAML-file-location: '"+ keyNode +"': "+ rhsStr.substring(0,rhsStr.length()>361?360:rhsStr.length()));
+                        if ( this.verbose ) System.out.println( HDR +" recursing with lookForwardYAMLPath=" + lookForwardYAMLPath +": ... @ YAML-file-location: '"+ keyNode +"': "+ rhsStrDump2Output);
 
                         //--------------------------------------------------------
                         // if we are here, we've only a PARTIAL match.
                         // So.. we need to keep recursing (specifically for Map & Sequence YAML elements)
                         if ( valNode.getNodeId() == NodeId.scalar && valNode instanceof ScalarNode ) {
                             final ScalarNode scalarN = (ScalarNode) valNode;
-                            final String valtag = scalarN.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
+                            // final String valtag = scalarN.getTag().getValue();  //tag:yaml.org,2002:str   --or--  !XYZ
                             if ( this.verbose ) System.out.println( HDR +" @ ScalarNode="+scalarN+"  _yamlPath.hasNext()="+ _yamlPath.hasNext() );
 
                             if ( _yamlPath.hasNext() ) {
@@ -363,7 +380,7 @@ public abstract class AbstractYamlEntryProcessor {
                                 // yeah! We found a full end2end match!  Also, No more recursion is feasible.
                                 // let sub-classes determine what to do here
                                 final boolean callbkRet5 = onEnd2EndMatch( _yamlPath, keyAsStr, keyNode, valNode, mapNode, cloneOfE2EPaths); // location #2 for end2end match
-                                if ( this.verbose ) System.out.println( HDR +" callbkRet5="+callbkRet5+" End2End Match#2 @ YAML-File: "+ keyNode +": "+ rhsStr.substring(0,rhsStr.length()>361?360:rhsStr.length()));
+                                if ( this.verbose ) System.out.println( HDR +" callbkRet5="+callbkRet5+" End2End Match#2 @ YAML-File: "+ keyNode +": "+ rhsStrDump2Output);
                                 if ( ! callbkRet5 ) continue; // Pretend as if match failed and continue to next peer YAML element.
                                 _end2EndPaths.clear();
                                 aMatchFound = true;
@@ -417,12 +434,11 @@ public abstract class AbstractYamlEntryProcessor {
                 final LinkedList<String> cloneOfE2EPaths = this.clone( _end2EndPaths );
                 final boolean callbkRet8 = onEnd2EndMatch( _yamlPath, scalarN.getValue(), scalarN, null, _parentNode, cloneOfE2EPaths); // location #2 for end2end match
                 if ( this.verbose ) System.out.println( HDR +" callbkRet8="+callbkRet8+" End2End Match#2 @ YAML-File: "+ scalarN +": "+ rhsStr.substring(0,rhsStr.length()>361?360:rhsStr.length()) );
-                if ( ! callbkRet8 ) {
-                    // continue thru below .. // Pretend as if match failed and continue to next peer YAML element.
-                } else {
+                if ( callbkRet8 ) {
                     _end2EndPaths.clear();
                     aMatchFound = true;
                 }
+                // else .. continue thru below .. // Pretend as if match failed and continue to next peer YAML element.
             }
 
         } else if ( _node.getNodeId() == NodeId.sequence && _node instanceof SequenceNode ) {
@@ -432,10 +448,11 @@ public abstract class AbstractYamlEntryProcessor {
             final YAMLPath lookForwardYAMLPath = YAMLPath.deepClone(_yamlPath); // to keep _yamlPath intact as we recurse in & out of sub-yaml-elements
 
             //------------------------------------------------------
+            //------------------------------------------------------
             // Let's check: whether a wildcard('**'), or we have a '*' for current path-element
             boolean bMatchAny = false;
             boolean bWildcard = false;
-            boolean bLetsIterate = false;
+            boolean bLetsIterate;
             String upcomingPathElem = null;
             YAMLPath nonStarLookFwdYAMLPath = null;
             if (  lookForwardYAMLPath.hasWildcardPrefix() ) {
@@ -474,42 +491,50 @@ public abstract class AbstractYamlEntryProcessor {
 
             // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/nodes/SequenceNode.java
             final SequenceNode seqNode = (SequenceNode) _node;
-            if ( this.verbose ) System.out.println( HDR +" SEQUENCE-node-id = ["+ seqNode.getNodeId() + "]" );
 
             final java.util.List<Node> seqs = seqNode.getValue();
-            final Object rhs = seqs; // for debug-printing purposes ONLY
-            final String rhsStr = seqs.toString(); // to make verbose logging code simplified
+            final String rhsStr = seqNode.toString(); // to make verbose logging code simplified
+            final String rhsStrDump = rhsStr.substring(0,rhsStr.length()>361?360:rhsStr.length());
+            if ( this.verbose ) System.out.println( HDR +"SEQUENCE-node = ["+ rhsStrDump + "]" );
 
             // ATTENTION: if bLetsIterate === false, we'll NOT be entering this loop.
             for ( int ix=0;  bLetsIterate && ix < seqs.size(); ix ++ ) {
 
-                final Node seqItemNode = seqs.get(ix); 
+                final Node seqItemNode = seqs.get(ix);
+                final String rhsStr22 = seqItemNode.toString(); // to make verbose logging code simplified
+                final String rhsStr22Dump = rhsStr22.substring(0,rhsStr22.length()>361?360:rhsStr22.length());
+                if ( this.verbose ) System.out.println( HDR +"SSUUBB_SEQITEM-node = ["+ rhsStr22Dump + "]" );
+
                 final LinkedList<String> cloneOfE2EPaths = this.clone( _end2EndPaths );
 
                 // if have a '**' or *' for current path-element..  variable 'upcomingPathElem' will point to the next yaml-element within the YAML-Path-PATTERN is.
                 // otherwise variable 'upcomingPathElem' will point to CURRENT yaml-element.
                 if ( this.verbose ) System.out.println( HDR +" bWildcard="+ bWildcard +" bMatchAny="+ bMatchAny +" upcomingPathElem="+ upcomingPathElem +" ix="+ix );
+                if ( this.verbose ) System.out.println( HDR +" Integer.valueOf(ix).toString().matches(upcomingPathElem)="+ Integer.valueOf(ix).toString().matches(upcomingPathElem) );
 
                 if ( bWildcard || bMatchAny || Integer.valueOf(ix).toString().matches(upcomingPathElem) ) {
+                    if ( this.verbose ) System.out.println( HDR +" nonStarLookFwdYAMLPath.hasNext()="+ nonStarLookFwdYAMLPath.hasNext() );
                     if (   !   nonStarLookFwdYAMLPath.hasNext() ) {
                         // yeah! We found a !!!full!!! end2end match!  Reason:- No more recursion is feasible.
                         final LinkedList<String> clone222OfE2EPaths = this.clone( cloneOfE2EPaths ); // to keep _yamlPath intact as we ITERATE thru this ARRAY LIST.
                         clone222OfE2EPaths.add("["+ix+"]"); // add the index like [1] into the discovered yaml-path
                         // let sub-classes determine what to do here
-                        final boolean callbkRet6 = onEnd2EndMatch( lookForwardYAMLPath, Integer.valueOf(ix), null, seqItemNode, seqNode, clone222OfE2EPaths); // location #2 for end2end match
+                        final boolean callbkRet6 = onEnd2EndMatch( lookForwardYAMLPath, ix, null, seqItemNode, seqNode, clone222OfE2EPaths); // location #2 for end2end match
                         // we do Not know how deep the recursion is.
                         // once recursion call returns, we happily go back to the UNTOUCHED _yamlPath & to _end2EndPaths  - which is still intact for use by the FOR loop.
-                        if ( this.verbose ) System.out.println( HDR +" callbkRet6="+callbkRet6+" End2End Match#2 @ YAML-File: "+ seqItemNode +": "+ rhsStr.substring(0,rhsStr.length()>361?360:rhsStr.length()));
+                        if ( this.verbose ) System.out.println( HDR +" callbkRet6="+callbkRet6+" End2End Match#2 @ YAML-File: "+ seqItemNode +": "+ rhsStrDump );
                         if ( ! callbkRet6 ) continue; // Pretend that EVEN IF match failed (per sub-class), continue to next peer YAML element.
                         aMatchFound = true;
                         continue; // for loop over Array
-                    } else {
-                        // Ok. We're FORCED to "move to" next element of YAML-Path-PATTERN.. .. (that is, nonStarLookFwdYAMLPath.next())
-                        // !!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!
-                        // THIS IS THE ONLY IF-ELSE EXECUTION-BRANCH that will .. Fall thru out of this nested-IF into rest of FOR-Loop body.
+                    // } else {
+                    //     // Ok. We're FORCED to "move to" next element of YAML-Path-PATTERN.. .. (that is, nonStarLookFwdYAMLPath.next())
+                    //     // !!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!
+                    //     // THIS IS THE ONLY IF-ELSE EXECUTION-BRANCH that will .. Fall thru out of this nested-IF into rest of FOR-Loop body.
                     }
+                    // else fall through.
+
                 } else {
-                    continue; // move on to next Array YAML element (next iteration of enclosing FOR LOOP)
+                    continue; // move on to next Array YAML element in 'seqs' (next iteration of innermost-enclosing FOR-LOOP)
                     // Why? Because when matching array-indices, it's very simple (black-n-white) whether a possible match or No possible match.
                 }
 
@@ -517,7 +542,7 @@ public abstract class AbstractYamlEntryProcessor {
                 //-------------------------------
                 if ( seqItemNode instanceof ScalarNode && seqItemNode.getNodeId() == NodeId.scalar) {
                     // can't be a match, as it's a simple Scalar - as in, Not even in the format   "rhs: lhs"
-                    onMatchFail( _yamlPath, seqNode, seqItemNode, Integer.valueOf(ix), _end2EndPaths); // location #5 for failure-2-match
+                    onMatchFail( _yamlPath, seqNode, seqItemNode, ix, _end2EndPaths); // location #5 for failure-2-match
 
                 } else if ( seqItemNode instanceof MappingNode && seqItemNode.getNodeId() == NodeId.mapping ) { // if the array-yaml-element is Not a simple string.
                     // @SuppressWarnings("unchecked")
@@ -532,24 +557,49 @@ public abstract class AbstractYamlEntryProcessor {
 
                 } else if ( seqItemNode instanceof SequenceNode && seqItemNode.getNodeId() == NodeId.sequence ) {
                     System.err.println( HDR +" incomplete code: WTF? YAML-Array consisting of Arrays??? Let me think about it .. on how to implement this! w Node-type "+ seqItemNode.getNodeId() +" and className='"+ seqItemNode.getClass().getName() +"'" );
-                    onMatchFail( _yamlPath, seqNode, seqItemNode, Integer.valueOf(ix), _end2EndPaths); // location #6 for failure-2-match    
+                    onMatchFail( _yamlPath, seqNode, seqItemNode, ix, _end2EndPaths); // location #6 for failure-2-match
                 } else {
                     System.err.println( HDR +" incomplete code: failure w Node-type "+ seqItemNode.getNodeId() +" and className='"+ seqItemNode.getClass().getName() +"'" );
-                    onMatchFail( _yamlPath, seqNode, seqItemNode, Integer.valueOf(ix), _end2EndPaths); // location #7 for failure-2-match    
+                    onMatchFail( _yamlPath, seqNode, seqItemNode, ix, _end2EndPaths); // location #7 for failure-2-match
 
                 } // if-Else   seqItemNode instanceof Map - (WITHIN FOR-LOOP)
-            } // for Object seqItemNode: seqs
+
+            } // FOR-LOOP seqItemNode: seqs
+
+            //-------------------------------
+            //-------------------------------
+            if ( upcomingPathElem != null && upcomingPathElem.matches("\\[[0-9]+\\]") ) {
+                // upcomingPathElem is _NOT_ a wildcard like [0-3] etc..
+                // upcomingPathElem is precisely a specific number like [28]
+                final int newIndex = Integer.parseInt( upcomingPathElem.substring( upcomingPathElem.indexOf('[')+1, upcomingPathElem.indexOf(']') )  );
+                if ( this.verbose ) System.out.println( HDR +"upcomingPathElem="+ upcomingPathElem+" converted into numeric-index = "+ newIndex );
+                if ( seqs.size() <= newIndex ) {
+                    // yeah! We __SORT__ of found a end2end match!  But, the sub-class must know how to deal with it (especially, Insert/Replace).
+                    final LinkedList<String> clone777OfE2EPaths = this.clone( _end2EndPaths ); // to keep _yamlPath intact as we ITERATE thru this ARRAY LIST.
+                    clone777OfE2EPaths.add("["+newIndex+"]"); // add the index like [1] into the discovered yaml-path
+                    // let sub-classes determine what to do here
+                    final boolean callbkRet7 = this.onEnd2EndMatchNewIndex( lookForwardYAMLPath, newIndex, seqNode, clone777OfE2EPaths); // location #2 for end2end match
+                    // we do Not know how deep the recursion is.
+                    // once recursion call returns, we happily go back to the UNTOUCHED _yamlPath & to _end2EndPaths  - which is still intact for use by the FOR loop.
+                    if ( this.verbose ) System.out.println( HDR +" callbkRet7="+callbkRet7+" onEnd2EndMatchNewIndex @ YAML-File: "+ rhsStrDump );
+                    // if ( ! callbkRet7 ) do nothing ..; // Pretend that EVEN IF match failed (per sub-class), continue to next peer YAML element.
+                    aMatchFound = true;
+                }
+            }
 
         } else {
             System.err.println( HDR +" incomplete code: Unable to handle Node-type '"+ _node.getNodeId() +" and className='"+ _node.getClass().getName() +"'");
             // onMatchFail( _yamlPath, _parentNode, _node, "Unknown-Node-Type "+_node.getNodeId(), _end2EndPaths); // location #10 for failure-2-match
         }
 
+        //------------------------------------------------------
+        //------------------------------------------------------
+
         if (  !   aMatchFound ) {
             // Not a single end2end match.  At best .. we can HOPE THAT we only had partial matches.
             // Specifically, when the YAMLPath is A.B.C.D (4-levels deep) and the YAML itself it < 4-levels deep.. we need to address such a scenario.
             // This above scenario.. in case of InsertYamlProcessor.java.. allows it to do the equivalent of 'mkdir -p'.
-            if ( this.verbose ) System.out.println( HDR +" recursiveSearch(): Not a single match for '"+ _yamlPath.toString() +"'");
+            if ( this.verbose ) System.out.println( HDR +" Not a single match for '"+ _yamlPath.toString() +"'");
             onMatchFail( _yamlPath, _parentNode, _node, _yamlPath.yamlElemArr[ _yamlPath.yamlElemArr.length - 1 ], null); // location #11 for failure-2-match
             // final YAMLPath ypNoMatches = YAMLPath.deepClone(_yamlPath); // to keep _yamlPath intact within this function.. as it's passed by reference into this function.
             // ypNoMatches.skip2end();
