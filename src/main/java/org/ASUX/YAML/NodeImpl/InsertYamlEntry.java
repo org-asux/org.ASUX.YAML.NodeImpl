@@ -35,6 +35,7 @@ package org.ASUX.YAML.NodeImpl;
 import org.ASUX.yaml.YAMLPath;
 
 import org.ASUX.common.Tuple;
+import org.ASUX.common.Triple;
 
 import java.util.List;
 import java.util.LinkedList;
@@ -49,7 +50,7 @@ import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.MappingNode;
 import org.yaml.snakeyaml.nodes.SequenceNode;
 import org.yaml.snakeyaml.nodes.Tag;
-import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/error/Mark.java
+// import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/error/Mark.java
 import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
 import static org.junit.Assert.*;
@@ -70,6 +71,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     protected final ArrayList< Tuple<Object, Node> > existingPathsForInsertion = new ArrayList<>();
     protected final ArrayList< Tuple< YAMLPath, Node> > newPaths2bCreated = new ArrayList<>();
     final ArrayList< Tuple< YAMLPath, Node > > deepestNewPaths2bCreated = new ArrayList<>();
+    final ArrayList< Triple< YAMLPath, Integer, SequenceNode > > newIndexEntries2bCreated = new ArrayList<>();
 
     protected final Object newData2bInserted;
 
@@ -132,7 +134,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     public final Node validateNewContent( final Object _nob ) throws Exception
     {
         final String HDR = CLASSNAME +": validateNewContent(): ";
-        Node tmpO = null;
+        Node tmpO;
         if ( this.verbose ) System.out.println( HDR +"  _nob type= "+ _nob.getClass().getName() +" (_nob instanceof Node)= "+ (_nob instanceof Node) );
         if ( _nob instanceof Node ) {
             tmpO = (Node) _nob;
@@ -169,10 +171,32 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
             System.out.print( HDR +"_end2EndPaths=");
         if ( this.verbose || this.showStats ) {
             _end2EndPaths.forEach( s -> System.out.print(s+", ") );
-            System.out.println("");
+            System.out.println();
         }
-        this.existingPathsForInsertion.add( new Tuple<Object, Node>( _key, _parentNode ) );
+        this.existingPathsForInsertion.add( new Tuple<>( _key, _parentNode ) );
         if ( this.verbose ) System.out.println( HDR +"count="+this.existingPathsForInsertion.size() +" _parentNode="+ _parentNode );
+        return true;
+    }
+
+    //-------------------------------------
+    /** <p>This function will be called when a full/end2end match of a YAML path-expression (that ends in an INDEX) happens.</p>
+     * <p>Example: if the YAML-Path-regexp is <code>paths.*.*.responses.[4]</code> .. then<br>
+     * .. this function will be called __ONLY_IF__ the SequenceNode rooted @  <code>paths./pet.put.responses</code> has 3 or less children.  Note: the index provided is 4.</p>
+     * <p>This method is only useful for 2 specific YAML commands (insert and replace) - that is, specifically the subclasses {@link InsertYamlEntry} and {@link ReplaceYamlEntry}</p>
+     * <p>This is a very specialized function, that supports very rare use-cases.</p>
+     *
+     * See details and warnings in {@link org.ASUX.YAML.NodeImpl.AbstractYamlEntryProcessor#onEnd2EndMatchNewIndex}
+     */
+    @Override
+    protected boolean onEnd2EndMatchNewIndex( final YAMLPath _yamlPath, final int _newIndex, final SequenceNode _parentSeqNode, final LinkedList<String> _end2EndPaths ) throws Exception {
+        final String HDR = CLASSNAME +" onEnd2EndMatchNewIndex("+ _yamlPath +","+ _newIndex +",_parentSeqNode,"+ _end2EndPaths +"): ";
+        if (  _parentSeqNode == null || _newIndex <= 0 ) {
+            if ( this.verbose ) System.out.println( HDR +" Returning immediately for _parentNode=\n"+ NodeTools.Node2YAMLString(_parentSeqNode) );
+            return false;
+        }
+
+        if ( this.verbose ) System.out.println( HDR +" this.newIndexEntries2bCreated has a new entry: "+ _newIndex +" "+ _yamlPath );
+        this.newIndexEntries2bCreated.add( new Triple<>( _yamlPath, _newIndex, _parentSeqNode ) );
         return true;
     }
 
@@ -220,9 +244,10 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
         // if yes (there were matches).. insert the new content into EXISTING YAML LHS.
         // if not.. 'mkdir -p'
         if ( this.existingPathsForInsertion.size() >= 1 ) {
+            if ( this.verbose ) System.out.println( HDR +" this.existingPathsForInsertion has >=1 entries.  Invoking insertNewContentAtExistingNodes().." );
             insertNewContentAtExistingNodes( false, _topmostNode, _yamlPath );
             if ( this.showStats ) System.out.println( "count="+ this.existingPathsForInsertion.size() );
-            if ( this.verbose ) this.existingPathsForInsertion.forEach( tpl -> { System.out.println(tpl.key); } );
+            if ( this.verbose ) this.existingPathsForInsertion.forEach( tpl -> System.out.println(tpl.key) );
             return; // !!!!!!!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!!!!!!!! This function returns here.
         }
 
@@ -232,8 +257,29 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
         // Step 3: equivalent of 'mkdir -p' .. create all missing nodes.
         mkdirMinusP_putContent( _topmostNode, _yamlPath );
 
+        //-------------------------------------------------
+        // Step 4: if a SequenceYAML has less # of children that the INDEX provided in YAML-path... create dummy intermediate children and finally add the last child.
+        if ( this.verbose ) System.out.println( HDR +" this.newIndexEntries2bCreated.size() = "+ this.newIndexEntries2bCreated.size() +" entries." );
+        if ( this.newIndexEntries2bCreated.size() >= 1 ) {
+            for ( Triple<YAMLPath, Integer, SequenceNode> triple: this.newIndexEntries2bCreated ) {
+                if ( this.verbose ) System.out.println( HDR +" this.newIndexEntries2bCreated: Index = "+ triple.v2 );
+                final java.util.List<Node> seqs = triple.v3.getValue();
+                for ( int ix=seqs.size();  ix < triple.v2;  ix ++ ) {
+                    if ( this.verbose ) {
+                        final String rhsStr = triple.v3.toString(); // to make verbose logging code simplified
+                        final String rhsStrDump = rhsStr.substring(0,rhsStr.length()>361?360:rhsStr.length());
+                        if ( this.verbose ) System.out.println( HDR +" Adding a dummy-placeholder node @ index # "+ ix +" _parentNode=\n"+ rhsStrDump );
+                    }
+                    final ScalarNode newSN = new ScalarNode( Tag.STR,     "<undefined>",     null, null, dumperoptions.getDefaultScalarStyle() );
+                    seqs.add( newSN ); // add dummy YAML-nodes if user asks for a new Index, that is WELL beyond what the 'seq' length is
+                } // inner FOR-LOOP
+                if ( this.verbose ) System.out.println( HDR +" !!!!!!!!!Adding the user-provided data @ index # "+ triple.v2 +"." );
+                seqs.add( (Node) this.newData2bInserted );
+            } // OUTER-For-Loop
+        } // If size() > 1
+
         if ( this.showStats ) System.out.println( "count="+ this.deepestNewPaths2bCreated.size() );
-        if ( this.verbose ) this.deepestNewPaths2bCreated.forEach( tpl -> { System.out.println(tpl.key); } );
+        if ( this.verbose ) this.deepestNewPaths2bCreated.forEach( tpl -> System.out.println(tpl.key) );
     }
 
     //==============================================================================
@@ -294,21 +340,21 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                 final MappingNode mapN = (MappingNode) tpl.val;
                 final java.util.List<NodeTuple> tuples = mapN.getValue();
                 // iterate thru tuples and find 'key2Search' as a ScalarNode for Key/LHS.
-                int ix = -1;
-                boolean bFound = false;
-                NodeTuple newTuple = null;
+                // int ix = -1;
+                // boolean bFound = false;
+                // NodeTuple newTuple = null;
                 for( NodeTuple kv: tuples ) {
-                    ix ++;
+                    // ix ++;
                     final Node keyN = kv.getKeyNode();
                     assertTrue( keyN instanceof ScalarNode );
-                    assertTrue( keyN.getNodeId() == NodeId.scalar );
+                    assertSame( keyN.getNodeId(), NodeId.scalar );
                     final ScalarNode scalarN = (ScalarNode) keyN;
                     final String keyAsStr = scalarN.getValue();
-                    assertTrue( keyAsStr != null );
+                    assertNotNull( keyAsStr );
                     if ( this.verbose ) System.out.println( HDR +" found LHS, keyTag & RHS = ["+ keyN + "] !"+ scalarN.getTag().getValue() + " : "+ kv.getValueNode() + " ;" );
 
                     if ( keyAsStr.equals(key2Search) ) {
-                        bFound = true;
+                        // bFound = true;
                         // Now put in a new entry - with the replacement data!  This is because NodeTuple is immutable, so it needs to be replaced (within tuples) with a new instance.
                         // newTuple = new NodeTuple( keyN, NodeTools.deepClone( newNode2bInserted ) );
                         doInsertBasedOnNodeType( _bIsReplaceCmd, mapN, key2Search, NodeTools.deepClone( newNode2bInserted ) ); // This command will CHANGE the 'tuples' iterator used for the INNER FOR LOOP!!!!!
@@ -325,13 +371,13 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                 // Semantically, it makes NO sense that we have an entry in 'this.existingPathsForInsertion' that is NOT in 'mapN'
 
             } else if ( tpl.key instanceof Integer && tpl.val instanceof SequenceNode ) {
-                final Integer ix = (Integer) tpl.key;
+                final int ix = (Integer) tpl.key;
 
                 final SequenceNode seqN = (SequenceNode) tpl.val;
                 final java.util.List<Node> seqs = seqN.getValue();
-                seqs.add( ix.intValue(), newNode2bInserted );
-                if ( _bIsReplaceCmd && ix.intValue() < seqs.size() )
-                    seqs.remove( ix.intValue() + 1 );
+                seqs.add(ix, newNode2bInserted );
+                if ( _bIsReplaceCmd && ix < seqs.size() )
+                    seqs.remove(ix + 1 );
 
             } else {
                 throw new Exception( HDR +" UNEXPECTED Node/Tpl2["+ tpl.key.getClass().getName() +"]="+ tpl.key +" and the Key/Ref/Tpl1["+ tpl.val.getClass().getName() +"]= "+ tpl.val +" " );
@@ -395,9 +441,21 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
         for ( Tuple< YAMLPath, Node > tpl : this.deepestNewPaths2bCreated ) {
             final YAMLPath yp = tpl.key;
             final Node lowestExistingNode = tpl.val;
-            final String prefix = yp.getPrefix();
+            // final String prefix = yp.getPrefix();
             final String suffix = yp.getSuffix();
-            if ( this.verbose ) System.out.println( HDR +": about to.. add the NEW path ["+ suffix +"]" );
+            int index = -1;
+            if ( suffix.matches("\t*\\[[0-9]+\\]") ) {
+                final int newIndex = Integer.parseInt( suffix.substring( suffix.indexOf('[')+1, suffix.indexOf(']') )  );
+                if ( this.verbose ) System.out.println( HDR +"suffix="+ suffix+" converted into numeric-index = "+ newIndex );
+                if ( newIndex > 0 ) {
+                    // This is 'mkdir -p' method.  So, it makes no sense to create SequenceNode's children for newIndex > 0.
+                    //  Actually, leave that to the code that uses 'this.newIndexEntries2bCreated' !!!
+                    if ( this.verbose ) System.out.println( HDR +": Ignoring NEW path ["+ suffix +"]" );
+                    continue; // do NOT create new children with keys like/example '[6]'
+                }
+            } else {
+                if ( this.verbose ) System.out.println( HDR +": about to.. add the NEW path ["+ suffix +"]" );
+            }
             Node prevchildelem;
             if ( this.newData2bInserted instanceof MappingNode ) {
                 prevchildelem = (MappingNode) this.newData2bInserted;
@@ -415,14 +473,14 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                 // !!!!!!!!!!!!!! ATTENTION !!!!!!!!!!!!!! This iterator / for-loop counts DOWN.
                 if ( yp.yamlElemArr[ix].matches("\\[[0-9][0-9]*\\]") ) { // If .. a 1-2 digit number between square-brackets .. ..
                     // we'll ignore the actual value of the 1-2 digit number.  Assumes it's === [0]
-                    final java.util.LinkedList<Node> seqs = new java.util.LinkedList<Node>();
+                    final java.util.LinkedList<Node> seqs = new java.util.LinkedList<>();
                     seqs.add( prevchildelem );
                     final SequenceNode seqN = new SequenceNode( Tag.SEQ, false, seqs,  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
                     if ( this.verbose ) System.out.println( HDR +": added the NEW ARRAY-ELEMENT @ depth="+ ix +" yp.yamlElemArr[ix]="+ yp.yamlElemArr[ix] +"]" );
                     prevchildelem = seqN;
                 } else {
                     final ScalarNode keySN = new ScalarNode( Tag.STR,     yp.yamlElemArr[ix],     null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
-                    final List<NodeTuple> nt = new LinkedList<NodeTuple>();
+                    final List<NodeTuple> nt = new LinkedList<>();
                     nt.add ( new NodeTuple( keySN, prevchildelem ) ); // Even if 'prevchildelem' is 'EmptyYAML' this is OK.
                     final Node newMN = new MappingNode( Tag.MAP, false,    nt,    null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
                     if ( this.verbose ) System.out.println( HDR +": added the NEW MAPPING-Node path @ depth="+ ix +" yp.yamlElemArr[ix]="+ yp.yamlElemArr[ix] +"  newMN= ["+ newMN +"]" );
