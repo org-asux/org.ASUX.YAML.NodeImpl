@@ -32,45 +32,17 @@
 
 package org.ASUX.YAML.NodeImpl;
 
-import org.ASUX.yaml.YAMLPath;
-import org.ASUX.yaml.YAML_Libraries;
-import org.ASUX.yaml.MemoryAndContext;
-import org.ASUX.yaml.YAMLImplementation;
-import org.ASUX.yaml.Enums;
-import org.ASUX.yaml.CmdLineArgs;
-import org.ASUX.yaml.CmdLineArgsBatchCmd;
-import org.ASUX.yaml.CmdLineArgsInsertCmd;
-import org.ASUX.yaml.CmdLineArgsMacroCmd;
-import org.ASUX.yaml.CmdLineArgsReplaceCmd;
-import org.ASUX.yaml.CmdLineArgsTableCmd;
-import org.ASUX.yaml.MacroStringProcessor;
+import org.ASUX.yaml.*;
+import org.yaml.snakeyaml.nodes.Node;
 
-import org.ASUX.common.Output; // needed to convert SnakeYAML' YAML Nodes into JSON's LinkedHashMap
-
-import java.io.InputStreamReader;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-
-import java.util.regex.*;
-import java.util.LinkedHashMap;
 import java.util.Properties;
 
-// https://yaml.org/spec/1.2/spec.html#id2762107
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.nodes.NodeTuple;
-import org.yaml.snakeyaml.nodes.NodeId;
-import org.yaml.snakeyaml.nodes.Node;
-import org.yaml.snakeyaml.nodes.ScalarNode;
-import org.yaml.snakeyaml.nodes.MappingNode;
-import org.yaml.snakeyaml.nodes.SequenceNode;
-import org.yaml.snakeyaml.nodes.Tag;
-// import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/error/Mark.java
-import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
-
-import org.junit.Test;
 import static org.junit.Assert.*;
+
+// https://yaml.org/spec/1.2/spec.html#id2762107
+// import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/error/Mark.java
 
 /**
  * <p>
@@ -147,55 +119,56 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
 
     /**
      *  This function is meant to be used by Cmd.main() and by BatchProcessor.java.  Read the code *FIRST*, to see if you can use this function too.
-     *  @param _cmdLA Everything passed as commandline arguments to the Java program {@link org.ASUX.yaml.CmdLineArgsCommon}
+     *  @param _clArgs Everything passed as commandline arguments to the Java program {@link org.ASUX.yaml.CmdLineArgsCommon}
      *  @param _inputData _the YAML inputData that is the input to pretty much all commands (a org.yaml.snakeyaml.nodes.Node object).
      *  @return either a String or org.yaml.snakeyaml.nodes.Node
      *  @throws YAMLPath.YAMLPathException if Pattern for YAML-Path provided is either semantically empty or is NOT java.util.Pattern compatible.
-     *  @throws FileNotFoundException if the filenames within _cmdLA do NOT exist
-     *  @throws IOException if the filenames within _cmdLA give any sort of read/write troubles
+     *  @throws FileNotFoundException if the filenames within _clArgs do NOT exist
+     *  @throws IOException if the filenames within _clArgs give any sort of read/write troubles
      *  @throws Exception by ReplaceYamlCmd method and this nethod (in case of unknown command)
      */
     @Override
-    public Object processCommand ( org.ASUX.yaml.CmdLineArgsCommon _cmdLA, final Object _inputData )
+    public Object processCommand ( org.ASUX.yaml.CmdLineArgsCommon _clArgs, final Object _inputData )
                 throws FileNotFoundException, IOException, Exception,
                 YAMLPath.YAMLPathException
     {
-        assertTrue( _cmdLA instanceof org.ASUX.yaml.CmdLineArgs );
-        final org.ASUX.yaml.CmdLineArgs cmdLineArgs = (org.ASUX.yaml.CmdLineArgs) _cmdLA;
-        final String HDR = CLASSNAME + ": processCommand("+ cmdLineArgs.cmdType +",_inputData): "; // NOTE !!!!!! _cmdLA/CmdLineArgsCommon .. does NOT have 'cmdType' instance-variable
+        final String HDR = CLASSNAME + ": processCommand("+ _clArgs.cmdType +",_inputData): "; // NOTE !!!!!! _clArgs/CmdLineArgsCommon .. does NOT have 'cmdType' instance-variable
 
         final NodeTools nodetools = (NodeTools) super.getYAMLImplementation();
-        assertTrue( nodetools != null );
-        NodeTools.updateDumperOptions( nodetools.getDumperOptions(), _cmdLA.getQuoteType() ); // Important <<---------- <<---------- <<-----------
+        assertNotNull( nodetools );
+        NodeTools.updateDumperOptions( nodetools.getDumperOptions(), _clArgs.quoteType ); // Important <<---------- <<---------- <<-----------
 
         assertTrue( _inputData instanceof Node );
         // why didn't we just make 2nd parameter of this method to be Node?
         // Well. This is ONE YAML-Library implementation (using SnakeYAML).
         // org.ASUX.YAML project has a 2nd YAML-Library Implementation.  Take a look at org.ASUX.yaml.YAML_Libraries
-        @SuppressWarnings("unchecked")
+        // @SuppressWarnings("unchecked")
         final Node _inputNode = (Node) _inputData;
 
-        switch ( cmdLineArgs.cmdType ) {
+        switch ( _clArgs.cmdType ) {
         case READ:
-            ReadYamlEntry readcmd = new ReadYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats, nodetools.getDumperOptions() );
-            readcmd.searchYamlForPattern( _inputNode, cmdLineArgs.yamlRegExpStr, cmdLineArgs.yamlPatternDelimiter );
+            final org.ASUX.yaml.CmdLineArgsReadCmd claRead = (org.ASUX.yaml.CmdLineArgsReadCmd) _clArgs;
+            ReadYamlEntry readcmd = new ReadYamlEntry( claRead.verbose, claRead.showStats, nodetools.getDumperOptions() );
+            readcmd.searchYamlForPattern( _inputNode, claRead.yamlRegExpStr, claRead.yamlPatternDelimiter );
             final Node outputStr = readcmd.getOutput();
             return outputStr;
 
         case LIST:
-            ListYamlEntry listcmd = new ListYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats, nodetools.getDumperOptions(), " , " );
-            listcmd.searchYamlForPattern( _inputNode, cmdLineArgs.yamlRegExpStr, cmdLineArgs.yamlPatternDelimiter );
+            final org.ASUX.yaml.CmdLineArgs claList = (org.ASUX.yaml.CmdLineArgs) _clArgs;
+            ListYamlEntry listcmd = new ListYamlEntry( claList.verbose, claList.showStats, nodetools.getDumperOptions(), " , " );
+            listcmd.searchYamlForPattern( _inputNode, claList.yamlRegExpStr, claList.yamlPatternDelimiter );
             final Node outputStr2 = listcmd.getOutput();
             return outputStr2;
 
         case DELETE:
-            if ( cmdLineArgs.verbose ) System.out.println( HDR +" about to start DELETE command");
-            DeleteYamlEntry delcmd = new DeleteYamlEntry( cmdLineArgs.verbose, cmdLineArgs.showStats, nodetools.getDumperOptions() );
-            delcmd.searchYamlForPattern( _inputNode, cmdLineArgs.yamlRegExpStr, cmdLineArgs.yamlPatternDelimiter );
+            final org.ASUX.yaml.CmdLineArgs claDel = (org.ASUX.yaml.CmdLineArgs) _clArgs;
+            if ( claDel.verbose ) System.out.println( HDR +" about to start DELETE command");
+            DeleteYamlEntry delcmd = new DeleteYamlEntry( claDel.verbose, claDel.showStats, nodetools.getDumperOptions() );
+            delcmd.searchYamlForPattern( _inputNode, claDel.yamlRegExpStr, claDel.yamlPatternDelimiter );
             return _inputNode;
 
         case TABLE:
-            final CmdLineArgsTableCmd claTbl = (CmdLineArgsTableCmd) cmdLineArgs;
+            final CmdLineArgsTableCmd claTbl = (CmdLineArgsTableCmd) _clArgs;
             if (claTbl.verbose) System.out.println( HDR +" claTbl.yamlRegExpStr="+ claTbl.yamlRegExpStr +" & tableColumns=[" + claTbl.tableColumns +"]" );
             TableYamlQuery tblcmd = new TableYamlQuery( claTbl.verbose, claTbl.showStats, nodetools.getDumperOptions(), claTbl.tableColumns, claTbl.yamlPatternDelimiter );
             tblcmd.searchYamlForPattern( _inputNode, claTbl.yamlRegExpStr, claTbl.yamlPatternDelimiter );
@@ -203,7 +176,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
             return output;
 
         case INSERT:
-            final CmdLineArgsInsertCmd claIns = (CmdLineArgsInsertCmd) cmdLineArgs;
+            final org.ASUX.yaml.CmdLineArgsInsertCmd claIns = (org.ASUX.yaml.CmdLineArgsInsertCmd) _clArgs;
             if (claIns.verbose) System.out.println( HDR +" claIns.yamlRegExpStr="+ claIns.yamlRegExpStr +" & loading @Insert-file: " + claIns.insertFilePath);
             final Object newContent = this.getDataFromReference( claIns.insertFilePath );
             if (claIns.verbose) System.out.println( HDR +" about to start INSERT command using: [" + newContent.toString() + "]");
@@ -213,7 +186,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
             return output3;
 
         case REPLACE:
-            final CmdLineArgsReplaceCmd claRepl = (CmdLineArgsReplaceCmd) cmdLineArgs;
+            final CmdLineArgsReplaceCmd claRepl = (CmdLineArgsReplaceCmd) _clArgs;
             if (claRepl.verbose) System.out.println( HDR +" loading @Replace-file: " + claRepl.replaceFilePath);
             final Object replContent = this.getDataFromReference( claRepl.replaceFilePath );
             if (claRepl.verbose) System.out.println( HDR +" about to start CHANGE/REPLACE command using: [" + replContent.toString() + "]");
@@ -223,11 +196,11 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
             return output5;
 
         case BATCH:
-            final CmdLineArgsBatchCmd claBatch = (CmdLineArgsBatchCmd) cmdLineArgs;
+            final CmdLineArgsBatchCmd claBatch = (CmdLineArgsBatchCmd) _clArgs;
             if (claBatch.verbose) System.out.println( HDR +" about to start BATCH command using: BATCH file [" + claBatch.batchFilePath + "]");
-            final Enums.ScalarStyle quoteStyle = ( claBatch.getQuoteType() == Enums.ScalarStyle.UNDEFINED ) ? Enums.ScalarStyle.PLAIN : claBatch.getQuoteType();
+            final Enums.ScalarStyle quoteStyle = ( claBatch.quoteType == Enums.ScalarStyle.UNDEFINED ) ? Enums.ScalarStyle.PLAIN : claBatch.quoteType;
 
-            final BatchCmdProcessor batcher = new BatchCmdProcessor( claBatch.verbose, claBatch.showStats, claBatch.isOffline(), quoteStyle, nodetools.getDumperOptions() );
+            final BatchCmdProcessor batcher = new BatchCmdProcessor( claBatch.verbose, claBatch.showStats, claBatch.offline, quoteStyle, nodetools.getDumperOptions() );
             batcher.setMemoryAndContext( this.memoryAndContext );
             final Node outpData2 = batcher.go( claBatch.batchFilePath, _inputNode );
             if ( this.verbose ) System.out.println( HDR +" outpData2 =" + outpData2 +"\n\n");
@@ -235,25 +208,25 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
 
         case MACROYAML:
         case MACRO:
-            final CmdLineArgsMacroCmd claMacro = (CmdLineArgsMacroCmd) cmdLineArgs;
-            if (claMacro.verbose) System.out.println( HDR +" loading Props file [" + claMacro.propertiesFilePath + "]");
-            assertTrue( claMacro.propertiesFilePath != null );
+            // @SuppressWarnings("unchecked")
+            final CmdLineArgsMacroCmd claMacro = (CmdLineArgsMacroCmd) _clArgs;
+            if (claMacro.verbose) System.out.println( HDR +" case MACRO: loading Props file [" + claMacro.propertiesFilePath + "]");
+            assertNotNull( claMacro.propertiesFilePath );
 
             MacroYamlProcessor macroYamlPr = null;
-            // MacroStringProcessor macroStrPr = null;
 
-            switch ( cmdLineArgs.cmdType ) {
-                case MACRO:     assertTrue( false ); // we can't get here with '_input' ..  _WITHOUT_ it being a _VALID_ YAML content.   So, so might as well as use 'MacroYamlProcessor'
-                                // macroStrPr = new MacroStringProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'nodetools.getDumperOptions()'
-                                break;
+            switch ( _clArgs.cmdType ) {
+                case MACRO:     // fail(); // we can't get here with '_input' ..  _WITHOUT_ it being a _VALID_ YAML content.   So, so might as well as use 'MacroYamlProcessor'
+                                // break;
                 case MACROYAML: macroYamlPr = new MacroYamlProcessor( claMacro.verbose, claMacro.showStats ); // does NOT use 'nodetools.getDumperOptions()'
                                 break;
-                default: assertTrue( false ); // should not be here.
+                default: fail(); // should not be here.
             }
 
             Properties properties = null;
             if ( "!AllProperties".equals( claMacro.propertiesFilePath ) || (claMacro.propertiesFilePath == null) || "null".equals(claMacro.propertiesFilePath) || (claMacro.propertiesFilePath.trim().length()<=0)  )   {
                 // do Nothing.   properties will remain set to 'null'
+                if (claMacro.verbose) System.out.println( HDR +" case MACRO: All Properties remain set to NULL!");
             } else {
                 final Object content = this.getDataFromReference( claMacro.propertiesFilePath );
                 if (content instanceof Properties) {
@@ -265,19 +238,17 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
 
             if (claMacro.verbose) System.out.println( HDR +" about to start MACRO command using: [Props file [" + claMacro.propertiesFilePath + "]");
             Node outpData = null;
-            switch ( cmdLineArgs.cmdType ) {
-                case MACRO:     assertTrue( false ); // we can't get here with '_input' ..  _WITHOUT_ it being a _VALID_ YAML content.   So, so might as well as use 'MacroYamlProcessor'
-                                // outpData = macroStrPr.searchNReplace( raw-java.lang.String-from-where??, properties, this.memoryAndContext.getAllPropsRef() );
-                                break;
+            switch ( _clArgs.cmdType ) {
+                case MACRO:
                 case MACROYAML: outpData = macroYamlPr.recursiveSearch( _inputNode, properties, this.memoryAndContext.getAllPropsRef() );
                                 break;
-                default: assertTrue( false ); // should not be here.
+                default:        fail(); // should not be here.
             }
 
             return outpData;
 
         default:
-            final String es = HDR +" Unimplemented command: " + cmdLineArgs.toString();
+            final String es = HDR +" Unimplemented command: " + _clArgs.toString();
             System.err.println( es );
             throw new Exception( es );
         }
