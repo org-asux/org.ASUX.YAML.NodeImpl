@@ -140,6 +140,7 @@ See ALPHA_S inside https://bitbucket.org/asomov/snakeyaml/src/default/src/main/j
         // Leverage the appropriate YAMLReader library to load file-contents into a java.util.LinkedHashMap<String, Object>
         switch ( this.getYAMLLibrary() ) {
             case NodeImpl_Library:
+            case ORGSNAKEYAML_Library:
             case SNAKEYAML_Library:
                 // https://yaml.org/spec/1.2/spec.html#id2762107
                 // per https://bitbucket.org/asomov/snakeyaml/src/tip/src/test/java/examples/CustomMapExampleTest.java
