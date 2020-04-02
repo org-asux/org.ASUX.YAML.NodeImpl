@@ -37,12 +37,7 @@ import org.ASUX.common.Tuple;
 import org.ASUX.common.Output;
 import org.ASUX.common.Debug;
 
-import org.ASUX.yaml.MemoryAndContext;
-import org.ASUX.yaml.BatchFileGrammer;
-import org.ASUX.yaml.Enums;
-import org.ASUX.yaml.CmdLineArgs;
-import org.ASUX.yaml.CmdLineArgsBasic;
-import org.ASUX.yaml.CmdLineArgsBatchCmd;
+import org.ASUX.yaml.*;
 
 import java.util.regex.*;
 import java.util.ArrayList;
@@ -83,19 +78,21 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //==============================================================================
+    //  *  @param _verbose Whether you want deluge of debug-output onto System.out.
+    //  *  @param _showStats Whether you want a final summary onto console / System.out
+    //  *  @param _offline true if we pretent no internet-access is available, and we use 'cached' AWS-SDK responses - if available.
+    //  *  @param _quoteType one the values as defined in {@link org.ASUX.yaml.Enums} Enummeration
+    // public BatchCmdProcessor( final boolean _verbose, final boolean _showStats, final boolean _offline, final Enums.ScalarStyle _quoteType, final DumperOptions _d ) {
     /** <p>The only constructor - public/private/protected</p>
-     *  @param _verbose Whether you want deluge of debug-output onto System.out.
-     *  @param _showStats Whether you want a final summary onto console / System.out
-     *  @param _offline true if we pretent no internet-access is available, and we use 'cached' AWS-SDK responses - if available.
-     *  @param _quoteType one the values as defined in {@link org.ASUX.yaml.Enums} Enummeration
+     * @param _cmdLineArgs NotNull instance of the command-line arguments passed in by the user.
      *  @param _d instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
      */
-    public BatchCmdProcessor( final boolean _verbose, final boolean _showStats, final boolean _offline, final Enums.ScalarStyle _quoteType, final DumperOptions _d ) {
-        super( _verbose, _showStats, _offline, _quoteType );
+    public BatchCmdProcessor( final CmdLineArgsCommon _cmdLineArgs, final DumperOptions _d ) {
+        super( _cmdLineArgs );
         this.dumperoptions = _d;
     }
 
-    // private BatchCmdProcessor() { this.verbose = false;    this.showStats = true;  this.dumperoptions = null; } // Do Not use this.
+    // private BatchCmdProcessor() { this.cmdLineArgs.verbose = false;    this.showStats = true;  this.dumperoptions = null; } // Do Not use this.
 
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -240,7 +237,7 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
         // if ( _node == null ) return NodeTools.getEmptyYAML( this.dumperoptions );
 
         //-----------------------------------------
-        if ( this.verbose ) System.out.println( HDR +" BEFORE STARTING SWITCH-stmt.. re: "+ _batchCmds.getState() +" object of type ["+ _node.getClass().getName() +"] = "+ _node.getNodeId() );
+        if ( this.cmdLineArgs.verbose ) System.out.println( HDR +" BEFORE STARTING SWITCH-stmt.. re: "+ _batchCmds.getState() +" object of type ["+ _node.getClass().getName() +"] = "+ _node.getNodeId() );
 
         //-----------------------------------------
         switch( _node.getNodeId() ) {
@@ -293,12 +290,12 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
             forLoopProps.setProperty( FOREACH_INDEX, Integer.toString(ix) ); // to be used by all commands INSIDE the 'foreach' block-inside-batchfile
             forLoopProps.setProperty( FOREACH_INDEX_PLUS1, Integer.toString(ix+1) ); // to be used by all commands INSIDE the 'foreach' block-inside-batchfile
 
-            if ( this.verbose ) System.out.println( HDR +" @@@@@@@@@@@@@@@@@ foreach/Array-index #"+ ix +" : Object's type ="+ o.getClass().getName() +" and it's toString()=["+ o.toString() +"]" );
+            if ( this.cmdLineArgs.verbose ) System.out.println( HDR +" @@@@@@@@@@@@@@@@@ foreach/Array-index #"+ ix +" : Object's type ="+ o.getClass().getName() +" and it's toString()=["+ o.toString() +"]" );
 
             //----------------------------------------------------------------------------------------------------------------------
             if ( o instanceof ScalarNode ) {
                 final ScalarNode scalarN = (ScalarNode) o;
-                if ( this.verbose ) System.out.println( HDR +" itr.next() is of ScalarNode type="+ scalarN  );
+                if ( this.cmdLineArgs.verbose ) System.out.println( HDR +" itr.next() is of ScalarNode type="+ scalarN  );
 
                 forLoopProps.setProperty( FOREACH_ITER_KEY, scalarN.getValue() ); // to be used by all commands INSIDE the 'foreach' block-inside-batchfile
                 forLoopProps.setProperty( FOREACH_ITER_VALUE, scalarN.getValue() );
@@ -315,7 +312,7 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
             //----------------------------------------------------------------------------------------------------------------------
             } else if ( o instanceof NodeTuple) {
                 final NodeTuple tuple = (NodeTuple) o;
-                if ( this.verbose ) System.out.println( HDR +" itr.next() is of NodeTuple type"+ tuple );
+                if ( this.cmdLineArgs.verbose ) System.out.println( HDR +" itr.next() is of NodeTuple type"+ tuple );
                 final Node keyN = tuple.getKeyNode();
                 assertTrue( keyN instanceof ScalarNode && keyN.getNodeId() == NodeId.scalar ); // if assertTrue fails, what scenario does that represent?
                 final ScalarNode scalarKeyN = (ScalarNode) keyN;
@@ -335,7 +332,7 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
             //----------------------------------------------------------------------------------------------------------------------
             } else if ( o instanceof Node ) {
                 final Node node = (Node) o;
-                if ( this.verbose ) System.out.println( HDR +" itr.next() is of generic-SnakeYamlNode type = "+ node );
+                if ( this.cmdLineArgs.verbose ) System.out.println( HDR +" itr.next() is of generic-SnakeYamlNode type = "+ node );
 
                 forLoopProps.setProperty( FOREACH_ITER_KEY, node.toString() ); // to be used by all commands INSIDE the 'foreach' block-inside-batchfile
                 forLoopProps.setProperty( FOREACH_ITER_VALUE, NodeTools.Node2YAMLString( node ) );
@@ -386,7 +383,12 @@ public class BatchCmdProcessor extends org.ASUX.yaml.BatchCmdProcessor<Node> {
     // For unit-testing purposes only
     public static void main(String[] args) {
         try {
-            final BatchCmdProcessor o = new BatchCmdProcessor(true, true, true, Enums.ScalarStyle.PLAIN, GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter() );
+            final CmdLineArgsBatchCmd cmd = new CmdLineArgsBatchCmd();
+            cmd.verbose = true;
+            cmd.showStats = true;
+            cmd.quoteType = Enums.ScalarStyle.PLAIN;
+            cmd.offline = false;
+            final BatchCmdProcessor o = new BatchCmdProcessor( cmd, GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter() );
             Node inpMap = null;
             Node outpMap = o.go( args[0], inpMap );
         } catch (Exception e) {
