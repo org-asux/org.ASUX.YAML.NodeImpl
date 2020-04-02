@@ -72,7 +72,8 @@ import static org.junit.Assert.*;
  * </p>
  * 
  * @see org.ASUX.yaml.YAMLPath
- * @see org.ASUX.yaml.CmdLineArgs
+ * @see org.ASUX.yaml.CmdLineArgsCommon
+ * @see org.ASUX.yaml.CmdLineArgsRegExp
  *
  * @see org.ASUX.YAML.NodeImpl.ReadYamlEntry
  * @see org.ASUX.YAML.NodeImpl.ListYamlEntry
@@ -88,25 +89,27 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
     //=================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=================================================================================
-
     /**
      *  The constructor exclusively for use by  main() classes anywhere.
-     *  @param _verbose Whether you want deluge of debug-output onto System.out.
-     *  @param _showStats Whether you want a final summary onto console / System.out
-     *  @throws Exception if YAML-implementation is Not properly initialized or YAML-implementation cannot be "loaded"
+     *  @param _cmdLineArgs NotNull instance of the command-line arguments passed in by the user.
      */
-    public CmdInvoker( final boolean _verbose, final boolean _showStats ) throws Exception {
-        this( _verbose, _showStats, null );
+    public CmdInvoker( final CmdLineArgsCommon _cmdLineArgs ) {
+        this( _cmdLineArgs, null );
     }
+    // public CmdInvoker( final boolean _verbose, final boolean _showStats ) {
+    //     this( _verbose, _showStats, null );
+    // }
 
+    // *  @param _verbose Whether you want deluge of debug-output onto System.out.
+    // *  @param _showStats Whether you want a final summary onto console / System.out
+    // public CmdInvoker( final boolean _verbose, final boolean _showStats, final MemoryAndContext _memoryAndContext ) {
     /**
      *  Variation of constructor that allows you to pass-in memory from another previously existing instance of this class.  Useful within org.ASUX.YAML.NodeImp.BatchYamlProcessor which creates new instances of this class, whenever it encounters a YAML or AWS command within the Batch-file.
-     *  @param _verbose Whether you want deluge of debug-output onto System.out.
-     *  @param _showStats Whether you want a final summary onto console / System.out
+     *  @param _cmdLineArgs NotNull instance of the command-line arguments passed in by the user.
      *  @param _memoryAndContext pass in memory from another previously existing instance of this class.  Useful within org.ASUX.YAML.CollectionImpl.BatchYamlProcessor which creates new instances of this class, whenever it encounters a YAML or AWS command within the Batch-file.
      */
-    public CmdInvoker( final boolean _verbose, final boolean _showStats, final MemoryAndContext _memoryAndContext ) {
-        super(_verbose, _showStats, _memoryAndContext );
+    public CmdInvoker( final CmdLineArgsCommon _cmdLineArgs, final MemoryAndContext _memoryAndContext ) {
+        super( _cmdLineArgs, _memoryAndContext );
     }
 
     //=================================================================================
@@ -154,14 +157,14 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
             return outputStr;
 
         case LIST:
-            final org.ASUX.yaml.CmdLineArgs claList = (org.ASUX.yaml.CmdLineArgs) _clArgs;
+            final org.ASUX.yaml.CmdLineArgsRegExp claList = (org.ASUX.yaml.CmdLineArgsRegExp) _clArgs;
             ListYamlEntry listcmd = new ListYamlEntry( claList.verbose, claList.showStats, nodetools.getDumperOptions(), " , " );
             listcmd.searchYamlForPattern( _inputNode, claList.yamlRegExpStr, claList.yamlPatternDelimiter );
             final Node outputStr2 = listcmd.getOutput();
             return outputStr2;
 
         case DELETE:
-            final org.ASUX.yaml.CmdLineArgs claDel = (org.ASUX.yaml.CmdLineArgs) _clArgs;
+            final org.ASUX.yaml.CmdLineArgsRegExp claDel = (org.ASUX.yaml.CmdLineArgsRegExp) _clArgs;
             if ( claDel.verbose ) System.out.println( HDR +" about to start DELETE command");
             DeleteYamlEntry delcmd = new DeleteYamlEntry( claDel.verbose, claDel.showStats, nodetools.getDumperOptions() );
             delcmd.searchYamlForPattern( _inputNode, claDel.yamlRegExpStr, claDel.yamlPatternDelimiter );
@@ -203,7 +206,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
             final BatchCmdProcessor batcher = new BatchCmdProcessor( claBatch, nodetools.getDumperOptions() );
             batcher.setMemoryAndContext( this.memoryAndContext );
             final Node outpData2 = batcher.go( claBatch.batchFilePath, _inputNode );
-            if ( this.verbose ) System.out.println( HDR +" outpData2 =" + outpData2 +"\n\n");
+            if ( this.cmdLineArgs.verbose ) System.out.println( HDR +" outpData2 =" + outpData2 +"\n\n");
             return outpData2;
 
         case MACROYAML:
@@ -270,7 +273,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
                                 throws FileNotFoundException, IOException, Exception
     {
         final NodeTools nodetools = (NodeTools) this.getYAMLImplementation();
-        return InputsOutputs.getDataFromReference( _src, this.memoryAndContext, nodetools.getYAMLScanner(), nodetools.getDumperOptions(), this.verbose );
+        return InputsOutputs.getDataFromReference( _src, this.memoryAndContext, nodetools.getYAMLScanner(), nodetools.getDumperOptions(), this.cmdLineArgs.verbose );
     }
 
     //==============================================================================
@@ -289,7 +292,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
                             throws FileNotFoundException, IOException, Exception
     {
         final NodeTools nodetools = (NodeTools) this.getYAMLImplementation();
-        InputsOutputs.saveDataIntoReference( _dest, _input, this.memoryAndContext, nodetools.getYAMLWriter(), nodetools.getDumperOptions(), this.verbose );
+        InputsOutputs.saveDataIntoReference( _dest, _input, this.memoryAndContext, nodetools.getYAMLWriter(), nodetools.getDumperOptions(), this.cmdLineArgs.verbose );
     }
 
     //==============================================================================
