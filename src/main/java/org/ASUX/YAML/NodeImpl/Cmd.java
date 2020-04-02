@@ -173,7 +173,7 @@ public class Cmd {
 
         try {
             // Step 1: create 'cmdinvoker'
-            org.ASUX.YAML.NodeImpl.CmdInvoker cmdinvoker = new org.ASUX.YAML.NodeImpl.CmdInvoker( _cmdLineArgs.verbose, _cmdLineArgs.showStats );
+            org.ASUX.YAML.NodeImpl.CmdInvoker cmdinvoker = new org.ASUX.YAML.NodeImpl.CmdInvoker( _cmdLineArgs );
             if (_cmdLineArgs.verbose) System.out.println( HDR +"getting started with cmdline args = " + _cmdLineArgs + " " );
 
             // Steps 2 & 3: Startup the factory for YAML-implementation.
