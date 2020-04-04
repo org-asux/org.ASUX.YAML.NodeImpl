@@ -151,7 +151,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
         switch ( _clArgs.cmdType ) {
         case READ:
             final org.ASUX.yaml.CmdLineArgsReadCmd claRead = (org.ASUX.yaml.CmdLineArgsReadCmd) _clArgs;
-            ReadYamlEntry readcmd = new ReadYamlEntry( claRead.verbose, claRead.showStats, nodetools.getDumperOptions() );
+            ReadYamlEntry readcmd = new ReadYamlEntry( claRead, nodetools.getDumperOptions() );
             readcmd.searchYamlForPattern( _inputNode, claRead.yamlRegExpStr, claRead.yamlPatternDelimiter );
             final Node outputStr = readcmd.getOutput();
             return outputStr;
@@ -173,7 +173,7 @@ public class CmdInvoker extends org.ASUX.yaml.CmdInvoker<Node> {
         case TABLE:
             final CmdLineArgsTableCmd claTbl = (CmdLineArgsTableCmd) _clArgs;
             if (claTbl.verbose) System.out.println( HDR +" claTbl.yamlRegExpStr="+ claTbl.yamlRegExpStr +" & tableColumns=[" + claTbl.tableColumns +"]" );
-            TableYamlQuery tblcmd = new TableYamlQuery( claTbl.verbose, claTbl.showStats, nodetools.getDumperOptions(), claTbl.tableColumns, claTbl.yamlPatternDelimiter );
+            TableYamlQuery tblcmd = new TableYamlQuery( claTbl, nodetools.getDumperOptions() );
             tblcmd.searchYamlForPattern( _inputNode, claTbl.yamlRegExpStr, claTbl.yamlPatternDelimiter );
             final Node output = tblcmd.getOutput();
             return output;
