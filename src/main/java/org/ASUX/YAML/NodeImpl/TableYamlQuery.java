@@ -32,8 +32,6 @@
 
 package org.ASUX.YAML.NodeImpl;
 
-import org.ASUX.yaml.YAMLPath;
-
 import java.util.regex.*;
 
 import java.util.LinkedList;
@@ -65,9 +63,8 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
 
     public static final String CLASSNAME = TableYamlQuery.class.getName();
 
-    /** Should be a NotNull String[] object, where None of the strings are null */
-    protected String[] tableColumns; // = new String[]{"UNinitialized", "TableColumns"};
-    private String delimiter; //  = "UNINITIALIZED DELIMITER";
+    protected org.ASUX.yaml.CmdLineArgsTableCmd cmdLineArgs;
+    // private String delimiter; //  = "UNINITIALIZED DELIMITER";
 
     /** How many 'row/lines' matches happened.  This value should be identical to this.getOutput.size(). Value obtained using {@link #getCount()}*/
     protected int count;
@@ -86,46 +83,45 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=======================================================================
 
+     // *  @param _delim This delimiter should be used to separate the 'column-names' within the _tableColumns parameter.  pass in a value like '.'  '\t'   ','   .. pass in such a character as a string-parameter (being flexible in case delimiters can be more than a single character)
+     // *  @param _tableColumns a delimiter-separated list of "columns" (think SQL table columns).  The output of this table-yaml command is true 2-D table (2-D Array to be precise)
     /** The only Constructor.
-     *  @param _verbose Whether you want deluge of debug-output onto System.out
-     *  @param _showStats Whether you want a final summary onto console / System.out
+     *  @param _claTbl NotNull object, that is created when the comamnd-line (or a line in batch-file) is parsed by the ANTLR4 or other parser.
      *  @param _d instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
-     *  @param _tableColumns a delimiter-separated list of "columns" (think SQL table columns).  The output of this table-yaml command is true 2-D table (2-D Array to be precise)
-     *  @param _delim This delimiter should be used to separate the 'column-names' within the _tableColumns parameter.  pass in a value like '.'  '\t'   ','   .. pass in such a character as a string-parameter (being flexible in case delimiters can be more than a single character)
      *  @throws Exception if Pattern provided for YAML-Path is either semantically empty, Not a viable variable-name (see BatchFileGrammer.java's REGEXP_NAME constant) or is NOT java.util.Pattern compatible.
      */
-    public TableYamlQuery( final boolean _verbose, final boolean _showStats, final DumperOptions _d, String _tableColumns, final String _delim )
+    public TableYamlQuery(final org.ASUX.yaml.CmdLineArgsTableCmd _claTbl, final DumperOptions _d )
                         throws Exception
     {
-        super( _verbose, _showStats, _d );
-        this.delimiter = _delim;
+        super( _claTbl.verbose, _claTbl.showStats, _d );
+        this.cmdLineArgs = _claTbl;
 
         // Sanity check of "_delim"
         try {
-            /* Pattern p = */ Pattern.compile(_delim);
+            /* Pattern p = */ Pattern.compile( this.cmdLineArgs.yamlPatternDelimiter );
         }catch(PatternSyntaxException e){
-            if ( _verbose ) e.printStackTrace(System.err);
-            System.err.println( CLASSNAME +" Constructor: Invalid delimiter-pattern '"+ _delim +"' provided to constructor "+ e );
+            if ( this.cmdLineArgs.verbose ) e.printStackTrace(System.err);
+            System.err.println( CLASSNAME +" Constructor: Invalid delimiter-pattern '"+ this.cmdLineArgs.yamlPatternDelimiter +"' provided to constructor "+ e );
             throw e; // Should this method .. instead return for an invalid YAMLPath object.. .. and Let "this.isValid" stay as false ??
         }
 
-        _tableColumns = _tableColumns.trim(); // strip leading and trailing whitesapce (Java11 user strip(), Java<11, use trim()
-        if ( _tableColumns.length() <= 0 ) {
-            throw new Exception( CLASSNAME +" Constructor: semantically EMPTY list of Table-columns provided to Table-query Command." );
+        final String tablColumnsStr = this.cmdLineArgs.tableColumns.trim(); // strip leading and trailing whitesapce (Java11 user strip(), Java<11, use trim()
+        if ( this.cmdLineArgs.tableColumns.length() <= 0 ) {
+            throw new org.ASUX.yaml.InvalidCmdLineArgumentException( CLASSNAME +" Constructor: semantically EMPTY list of Table-columns provided to Table-query Command." );
         }
 
-        if (this.verbose) System.out.println( CLASSNAME + ": about to split '"+ _tableColumns +"' with delimiter '"+ _delim +"'");
-        this.tableColumns = _tableColumns.split( _delim );
-        for(int ix=0; ix < this.tableColumns.length; ix++ ) {
-            final String col = this.tableColumns[ix];
+        if (this.verbose) System.out.println( CLASSNAME + ": about to split '"+ tablColumnsStr +"' with delimiter '"+ this.cmdLineArgs.yamlPatternDelimiter +"'");
+        final String[] tableColumns = tablColumnsStr.split( this.cmdLineArgs.yamlPatternDelimiter );
+        for(int ix=0; ix < tableColumns.length; ix++ ) {
+            final String col = tableColumns[ix];
             final String errMsg = CLASSNAME +" Constructor: Invalid column # "+ ix +" '"+ col +"' provided to Table-query Command.";
             try {
                 Pattern p = Pattern.compile( org.ASUX.yaml.BatchFileGrammer.REGEXP_NAME );
                 if (  !  p.matcher( col ).matches() ) {
-                    throw new Exception( errMsg );
+                    throw new org.ASUX.yaml.InvalidCmdLineArgumentException( errMsg );
                 }
             }catch(PatternSyntaxException e){
-                if ( _verbose ) e.printStackTrace(System.err);
+                if ( this.cmdLineArgs.verbose ) e.printStackTrace(System.err);
                 throw new Exception( errMsg );
             }
         }
@@ -151,7 +147,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     /** This function will be called when a partial match of a YAML path-expression happens.
      * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onPartialMatch()
      */
-    protected boolean onPartialMatch( final Node _node, final YAMLPath _yamlPath, final String _keyStr, final Node _parentNode, final LinkedList<String> _end2EndPaths )
+    protected boolean onPartialMatch( final Node _node, final org.ASUX.yaml.YAMLPath _yamlPath, final String _keyStr, final Node _parentNode, final LinkedList<String> _end2EndPaths )
     {    
         // Do Nothing for "Table YAML-entry command"
         return true;
@@ -161,7 +157,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     /** This function will be called when a full/end2end match of a YAML path-expression happens.
      * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch()
      */
-    protected boolean onEnd2EndMatch( final YAMLPath _yamlPath, final Object _key, final Node _keyNode, final Node _valNode, final Node _parentNode, final LinkedList<String> _end2EndPaths ) throws Exception
+    protected boolean onEnd2EndMatch( final org.ASUX.yaml.YAMLPath _yamlPath, final Object _key, final Node _keyNode, final Node _valNode, final Node _parentNode, final LinkedList<String> _end2EndPaths ) throws Exception
     {
         final String HDR = CLASSNAME +": onEnd2EndMatch(): ";
         if ( this.verbose ) {
@@ -170,9 +166,11 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
             System.out.println("onEnd2EndMatch: _key = ["+ _key +"] _valNode = ["+ _valNode +"]");
         }
 
-        StringBuilder errMsgBuf = new StringBuilder(HDR + " For the pattern provided on cmdline for YAML-Path " + _yamlPath.toString() + " we found [");
+        StringBuilder errMsgBuf = new StringBuilder( "ERROR: " );
+        if ( this.cmdLineArgs.verbose ) errMsgBuf.append( HDR );
+        errMsgBuf.append( "For the pattern provided on cmdline as YAML-Path " + _yamlPath.yamlPathStr + " .. .. we found [" );
         for( String s: _end2EndPaths )
-            errMsgBuf.append(s).append(this.delimiter);
+            errMsgBuf.append(s).append( this.cmdLineArgs.yamlPatternDelimiter );
         final String errMsg = errMsgBuf.toString();
 
         //-------------------------------------
@@ -201,15 +199,18 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
 // ATTENTION: the delimiter to split-up 'col' into substrings is hardcoded as '/'
 // ATTENTION: In contrast, 'col' was parsed out of '_tableColumns' using 'delimiter' variable.  OBVIOUSLY, we can't use the same 'delimiter' variable.
 
-                        final YAMLPath yp = new YAMLPath( verbose, col, subDelimiter ); // convert something like '../sibling' into a YAMLPath object
-                        final ReadYamlEntry readYE = new ReadYamlEntry( verbose, /* showStats */ false, dumperoptions );
+                        final org.ASUX.yaml.YAMLPath yp = new org.ASUX.yaml.YAMLPath( verbose, col, subDelimiter ); // convert something like '../sibling' into a YAMLPath object
+                        final org.ASUX.yaml.CmdLineArgsReadCmd claRead = new org.ASUX.yaml.CmdLineArgsReadCmd();
+                        claRead.verbose = verbose;   claRead.showStats = false;   claRead.cmdType = org.ASUX.yaml.Enums.CmdEnum.READ;
+                        claRead.projectionPath = null;  claRead.cmdAsStr = "Created-by-code within "+CLASSNAME; // claRead.YAMLLibrary = this.claTable.YAMLLibrary;
+                        final ReadYamlEntry readYE = new ReadYamlEntry( claRead, dumperoptions );
 
                         if ( yp.yamlElemArr.length == 1 && "..".equals( yp.yamlElemArr[0] ) ) {
                             // "_parentNode" won't fit into the expected data-types within the "output" instance-variable of the main-class of this file
-                            throw new TableCmdException( _errmsg + "].  (#1) At that location canNOT give you a scalar @ '"+ col +"' provided to Table-query Command." );
+                            throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#1) At that location canNOT give you a scalar at '"+ col +"' provided to Table-query Command." );
 
                         } else if ( yp.yamlElemArr.length > 1 && "..".equals(yp.yamlElemArr[0]) ) {
-                            // throw new TableCmdException( _errmsg + "].  (#2) Unimplemented support for '..' PREFIX within YAML-Path provided '"+ col +"." );
+                            // throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].  (#2) Unimplemented support for '..' PREFIX within YAML-Path provided '"+ col +"." );
 
                             // strip out the initial '..' in the YAML-path denoted by 'col'
                             // Lookup up within parentNode
@@ -220,7 +221,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
                             final SequenceNode seqN1 = readYE.getOutput();
                             // The lookup @ 'col' a.k.a better be a ScalarNode only.  Obviously, by definition, a single ScalarMode only.
                             if ( seqN1.getValue().size() != 1 ||   !  (seqN1.getValue().get(0) instanceof ScalarNode)   ) {
-                                throw new TableCmdException( _errmsg + "].  (#2) At that location canNOT pick a SINGLE scalar @ '"+ col +"' provided to Table-query Command." );
+                                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#2) At that location canNOT pick a SINGLE scalar at '"+ col +"' provided to Table-query Command." );
                             } else {
                                 final ScalarNode sn1 = (ScalarNode) seqN1.getValue().get(0);
                                 tableRow.add( sn1.getValue() );
@@ -230,12 +231,12 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
 
                         } else {
                             // the YAML-path denoted by 'col' does _NOT_ begin with '..'
+                            if ( verbose ) System.out.println( "_mapnode = "+ NodeTools.Node2YAMLString( _mapnode ) + "\n" );
                             readYE.recursiveSearch( _mapnode,   yp,  null,  new LinkedList<>() );
                             final SequenceNode seqN2 = readYE.getOutput();
-                            if ( verbose ) System.out.println( "_mapnode = "+ NodeTools.Node2YAMLString( _mapnode ) + "\n" );
                             if ( verbose ) System.out.println( "yp = '"+ yp +"'\nseqN2 = "+ NodeTools.Node2YAMLString( seqN2 ) + "\n" );
                             if ( seqN2 == null || seqN2.getValue().size() != 1 ||    !  (seqN2.getValue().get(0) instanceof ScalarNode)   ) {
-                                throw new TableCmdException( _errmsg + "]. (#3)  At that location canNOT pick a SINGLE scalar @ '"+ col +"' provided to Table-query Command." );
+                                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#3) At that location canNOT pick a SINGLE scalar at '"+ col +"' provided to Table-query Command." );
                             } else {
                                 final ScalarNode sn2 = (ScalarNode) seqN2.getValue().get(0);
                                 tableRow.add( sn2.getValue() );
@@ -272,15 +273,15 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
                                 final String s = _errmsg + "].  (#4) At that location canNOT find SIMPLE-PAIR-of-SCALAR @ key= "+ keyAsStr +". Instead found '"+ valN +"' provided to Table-query Command.";
                                 if ( verbose ) System.out.println( HDR + s );
                                 // TO-DO: Need a cmdline-flag that gives user the option of gracefully returning KVPairs, instead of throwing Exception (next line)
-                                // throw new TableCmdException( _errmsg + "].  (#4) At that location canNOT find SIMPLE-PAIR-of-SCALAR @ key= "+ keyAsStr +". Instead found '"+ valN +"' provided to Table-query Command." );
-                                throw new TableCmdException( s );
+                                // throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].  (#4) At that location canNOT find SIMPLE-PAIR-of-SCALAR @ key= "+ keyAsStr +". Instead found '"+ valN +"' provided to Table-query Command." );
+                                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( s );
                             } // if-else whether a scalarNode
                         } // IF the column-name matched one of the columns/keys
 
                     } // inner for-loop - over each kv: tuples
 
                     if (  !  bFoundColumn ) {
-                        throw new TableCmdException( _errmsg + "].  (#5) At that location canNOT find column # "+ ix +" '"+ col +"' provided to Table-query Command." );
+                        throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].  (#5) At that location canNOT find column # "+ ix +" '"+ col +"' provided to Table-query Command." );
                     }
 
                 } // outer for-loop (over each column-name that the user wants outputted)
@@ -305,9 +306,12 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
 
         // final ArrayList<String> tablerow = new ArrayList<>();
         // final java.util.List<Node> row As Node = new LinkedList<Node>();
+        final String tablColumnsStr = this.cmdLineArgs.tableColumns.trim(); // strip leading and trailing whitesapce (Java11 user strip(), Java<11, use trim()
+        final String[] tableColumns = tablColumnsStr.split( this.cmdLineArgs.yamlPatternDelimiter );
+
         if ( _valNode instanceof MappingNode ) {
             final MappingNode mapN = (MappingNode) _valNode;
-            new PullTableElemsFromMap().go( mapN, this.tableColumns, errMsg ); // see inner class definition above
+            new PullTableElemsFromMap().go( mapN, tableColumns, errMsg ); // see inner class definition above
         // } else if ( _valNode instanceof Node ) {
         //      = (Node) _valNode;
         } else if ( _valNode instanceof SequenceNode ) {
@@ -316,13 +320,13 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
             for( Node node: listOfNodes ) {
                 if ( node instanceof MappingNode && node.getNodeId() == NodeId.mapping ) {
                     final MappingNode map2N = (MappingNode) node;
-                    new PullTableElemsFromMap().go( map2N, this.tableColumns, errMsg );
+                    new PullTableElemsFromMap().go( map2N, tableColumns, errMsg );
                 } else {
-                    throw new TableCmdException( errMsg +"].  (#6) At that location canNOT find ANY subelements!  Instead it's of type="+ _valNode.getNodeId() );
+                    throw new org.ASUX.yaml.InvalidCmdLineArgumentException( errMsg +"].  (#6) At that location canNOT find ANY subelements!  Instead it's of type="+ _valNode.getNodeId() );
                 }
             } // for
         } else {
-            throw new Exception( errMsg +"]. Searching to a TABULAR content, but found type ["+ _valNode.getClass().getName() +"]  with value = ["+ _valNode +"]");
+            throw new org.ASUX.yaml.InvalidCmdLineArgumentException( errMsg +"]. Searching to a TABULAR content, but found type ["+ _valNode.getClass().getName() +"]  with value = ["+ _valNode +"]");
         }
 
         return true;
@@ -332,7 +336,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     /** This function will be called whenever the YAML path-expression fails to match.
      * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onMatchFail()
      */
-    protected void onMatchFail( final YAMLPath _yamlPath, final Node _parentNode, final Node _nodeNoMatch, final Object _key, final LinkedList<String> _end2EndPaths )
+    protected void onMatchFail( final org.ASUX.yaml.YAMLPath _yamlPath, final Node _parentNode, final Node _nodeNoMatch, final Object _key, final LinkedList<String> _end2EndPaths )
     {    
             // Do Nothing for "Table YAML-entry command"
     }
@@ -344,7 +348,7 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
      *
      * You can fuck with the contents of any of the parameters passed, to your heart's content.
      */
-    protected void atEndOfInput( final Node _node, final YAMLPath _yamlPath ) throws Exception
+    protected void atEndOfInput( final Node _node, final org.ASUX.yaml.YAMLPath _yamlPath ) throws Exception
     {
         if ( super.showStats ) System.out.println("Total=" + this.count );
 
