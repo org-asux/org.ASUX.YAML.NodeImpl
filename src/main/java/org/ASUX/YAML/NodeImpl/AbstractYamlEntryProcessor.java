@@ -263,6 +263,8 @@ public abstract class AbstractYamlEntryProcessor {
         if (  ! _yamlPath.isValid ) return false;
         if ( ! _yamlPath.hasNext() ) return true; // YAML path has ended.  So, must be a good thing, as we got this far down the YAML-Path
 
+        if ( this.verbose ) System.out.println( HDR +"YAML to be searched = "+ _node +"\n"+ NodeTools.Node2YAMLString( _node ) +" " );
+
         //--------------------------
         final String yamlPathElemStr = _yamlPath.get(); // current path-element (a substring of full yamlPath)
         final Pattern yamlPElemPatt = java.util.regex.Pattern.compile( yamlPathElemStr.equals("**") ? ".*" : yamlPathElemStr ); // This should Not throw, per precautions in YAMLPath class
