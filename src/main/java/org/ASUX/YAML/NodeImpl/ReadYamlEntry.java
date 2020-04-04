@@ -60,16 +60,19 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
 
     public static final String CLASSNAME = ReadYamlEntry.class.getName();
 
+    protected org.ASUX.yaml.CmdLineArgsReadCmd cmdLineArgs;
     private int count;
     private SequenceNode output;
 
+     // *  @param _verbose Whether you want deluge of debug-output onto System.out
+     // *  @param _showStats Whether you want a final summary onto console / System.out
     /** The only Constructor.
-     *  @param _verbose Whether you want deluge of debug-output onto System.out
-     *  @param _showStats Whether you want a final summary onto console / System.out
+     * @param _claRead NotNull object, that is created when the comamnd-line (or a line in batch-file) is parsed by the ANTLR4 or other parser
      *  @param _d instance of org.yaml.snakeyaml.DumperOptions (typically passed in via {@link CmdInvoker})
      */
-    public ReadYamlEntry( final boolean _verbose, final boolean _showStats, final DumperOptions _d ) {
-        super( _verbose, _showStats, _d );
+    public ReadYamlEntry( final org.ASUX.yaml.CmdLineArgsReadCmd _claRead, final DumperOptions _d ) {
+        super( _claRead.verbose, _claRead.showStats, _d );
+        this.cmdLineArgs = _claRead;
         this.reset();
     }
 
@@ -100,19 +103,65 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
     /** This function will be called when a full/end2end match of a YAML path-expression happens.
      * See details and warnings in @see org.ASUX.yaml.AbstractYamlEntryProcessor#onEnd2EndMatch()
      */
-    protected boolean onEnd2EndMatch( final YAMLPath _yamlPath, final Object _key, final Node _keyNode, final Node _valNode, final Node _parentNode, final LinkedList<String> _end2EndPaths )
-    {
-        this.count ++;
-        if ( this.verbose ) {
-            System.out.print( CLASSNAME +": onEnd2EndMatch(): _end2EndPaths =");
-            _end2EndPaths.forEach( s -> System.out.print(s+"\t") );
-            System.out.println("onEnd2EndMatch: _key/LHS = ["+ _key +"] RHS = ["+ _valNode +"] under parent = "+ _parentNode );
-        }
-        if ( this.verbose ) System.out.println( (_valNode == null) ? "null" : _valNode.toString() );
+    protected boolean onEnd2EndMatch( final YAMLPath _yamlPath, final Object _key, final Node _keyNode, final Node _valNode, final Node _parentNode, final LinkedList<String> _end2EndPaths ) throws Exception
+    {   final String HDR = CLASSNAME +": onEnd2EndMatch(): ";
 
-        // this.output.add( _node ); // could be a string or a complex-Node;
-        final java.util.List<Node> seqs = this.output.getValue();
-        seqs.add( _valNode );
+        this.count ++; // keep count of # of matches
+
+        if ( this.cmdLineArgs.verbose ) {
+            System.out.print( HDR +"_end2EndPaths =");
+            _end2EndPaths.forEach( s -> System.out.print(s+"\t") );
+            System.out.println("onEnd2EndMatch: _key/LHS = ["+ _key +"] RHS = ["+ NodeTools.Node2YAMLString(_valNode) + "\n under parent = "+ _parentNode );
+        }
+
+        if ( this.cmdLineArgs.projectionPath == null ) {
+            this.output.getValue().add( NodeTools.deepClone( _valNode ) ); // could be a string or a complex-Node;
+            return true; // <<--------------- !!
+        }
+
+        // Otherwise, if this.cmdLineArgs.projectionPath is NOT empty/null
+        final YAMLPath yp = new YAMLPath( this.cmdLineArgs.verbose, this.cmdLineArgs.projectionPath, this.cmdLineArgs.yamlPatternDelimiter );
+        final ReadYamlEntry readYE = new ReadYamlEntry( this.cmdLineArgs, this.dumperoptions );
+
+        if ( yp.yamlElemArr.length == 1 && "..".equals( yp.yamlElemArr[0] ) ) {
+            // very simple this.cmdLineArgs.projectionPath.  Get the parent node!
+            this.output.getValue().add( _parentNode );
+            return true; // <<--------------- !!
+        }
+
+        // So, the this.cmdLineArgs.projectionPath is COMPLICATED enough for is to TRAVERSE some more..
+        if ( yp.yamlElemArr.length > 1 && "..".equals(yp.yamlElemArr[0]) ) {
+            // strip out the initial '..' in the this.cmdLineArgs.projectionPath
+            // Then, Lookup up within parentNode (by invoking readYE.searchYamlForPattern())
+            yp.hasNext();
+            if ( this.cmdLineArgs.verbose ) System.out.println( HDR +" yp='"+ yp +"' and yp.getSuffix()="+ yp.getSuffix() );
+
+            readYE.searchYamlForPattern( _parentNode, yp.getSuffix(), this.cmdLineArgs.yamlPatternDelimiter );
+            // Hope people do NOT do crazy things - by providing a RegExp in this.cmdLineArgs.projectionPath
+            // Ideally, readYE.getOutput() should - in typical semantic usage - return a singleton (Scalar, Mapping or Sequence Nodes).
+
+        } else {
+            // the complex this.cmdLineArgs.projectionPath does _NOT_ begin with '..'
+            readYE.recursiveSearch( _valNode, yp, null, new LinkedList<>());
+        }
+
+        final SequenceNode seqN1 = readYE.getOutput();
+        if ( this.cmdLineArgs.verbose ) System.out.println( "seqN2 = "+ NodeTools.Node2YAMLString( seqN1 ) + "\n" );
+
+        if ( seqN1.getValue().size() < 1 ) {
+            StringBuilder errMsgBuf = new StringBuilder( "ERROR: " );
+            if ( this.cmdLineArgs.verbose ) errMsgBuf.append( HDR );
+            errMsgBuf.append( "For the pattern provided on cmdline as YAML-Path " + _yamlPath.yamlPathStr + " .. .. we found [" );
+            for( String s: _end2EndPaths )
+                errMsgBuf.append(s).append( this.cmdLineArgs.yamlPatternDelimiter );
+            final String errMsg = errMsgBuf.toString();
+            throw new org.ASUX.yaml.InvalidCmdLineArgumentException( errMsg + "].\n\tAt that location canNOT find anything at '"+ this.cmdLineArgs.projectionPath +"' provided via the --projection cmd-line argument." );
+        } else {
+            for ( Node n:  seqN1.getValue() ) {
+                final Node newN = NodeTools.deepClone( n );
+                this.output.getValue().add( newN );
+            } // for-loop
+        } // if-else (above 11 lines)
 
         return true;
     }
