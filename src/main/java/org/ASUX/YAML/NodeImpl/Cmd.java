@@ -251,7 +251,7 @@ public class Cmd {
                             } // 1st inner if
                         } // outermost if
 
-                        if (_cmdLineArgs.verbose) System.out.println( HDR +" final output is of type " + humanFriendlyOutput.getClass().getName() + "]" );
+                        if (_cmdLineArgs.verbose) System.out.println( HDR +" final output is of type "+ humanFriendlyOutput.getClass().getName() +"]" );
                         cmdinvoker.getYAMLImplementation().write( javawriter, humanFriendlyOutput );
                         break;
                 } // switch
@@ -275,6 +275,10 @@ public class Cmd {
                 System.out.println( outputStr );
             }
 
+        } catch( org.ASUX.yaml.InvalidCmdLineArgumentException e ) {
+            if ( _cmdLineArgs == null || _cmdLineArgs.verbose ) e.printStackTrace(System.err);
+            System.err.println( e.getMessage() +"\n\nUser Error in command-line input:\n" + _cmdLineArgs + "");
+            System.exit(6);
         } catch ( org.apache.commons.cli.ParseException pe ) {
             // ATTENTION: If CmdLineArgs.java  and its subclasses threw an ParseException, they'll catch it themselves, showHelp(), and write debug output.
             // so.. do NOTHING in this class (Cmd.java)
