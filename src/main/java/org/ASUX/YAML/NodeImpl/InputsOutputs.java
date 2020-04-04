@@ -209,7 +209,11 @@ public class InputsOutputs {
                         // and less likely to see a YAML string inline
                         final String multilineStr = StringUtils.convertString2MultiLine( _verbose, _src, _memoryAndContext.getAllPropsRef() );
                         Node newnode = NodeTools.YAMLString2Node( multilineStr );
-                        if ( _verbose ) System.out.println( HDR +" new Node="+ newnode );
+                        final String yamlStr = NodeTools.Node2YAMLString( newnode );
+                        if ( _verbose ) System.out.println( HDR +" new Node==>> "+ yamlStr );
+                        if ( _verbose ) System.out.println( HDR +" new Node.toString() =>> "+ newnode );
+                        final Node recreatedNode = NodeTools.YAMLString2Node( yamlStr );
+                        if ( _verbose ) System.out.println( HDR +" new recreatedNode.toString() =>> "+ recreatedNode );
                         if ( newnode instanceof ScalarNode ) {
                             // THen.. rebuild the ScalanNode with the right DumperOptions
                             final ScalarNode sn = (ScalarNode) newnode;
