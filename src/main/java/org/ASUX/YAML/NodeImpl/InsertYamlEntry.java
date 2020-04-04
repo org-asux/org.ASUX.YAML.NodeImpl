@@ -299,7 +299,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                 final java.util.List<NodeTuple> newTuples = newMapN.getValue();
                 topmostTuples.addAll( newTuples );
             } else {
-                throw new Exception( "Invalid combination of new content and --input.  You provided new-content for "+ YAMLPath.ROOTLEVEL +" .. .. but provided new-content is NOT a proper 'Map' YAML. Instead new-content is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted.toString() +"]");
+                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "Invalid combination of new content and --input.  You provided new-content for "+ YAMLPath.ROOTLEVEL +" .. .. but provided new-content is NOT a proper 'Map' YAML. Instead new-content is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted.toString() +"]");
             }
         } else if ( _topmostNode instanceof SequenceNode && _topmostNode.getNodeId() == NodeId.sequence ) {
             final SequenceNode seqN = (SequenceNode) _topmostNode;
@@ -307,7 +307,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
             seqs.add( newNode2bInserted );
         } else if ( _topmostNode instanceof ScalarNode && _topmostNode.getNodeId() == NodeId.scalar ) {
             final ScalarNode scaN = (ScalarNode) _topmostNode;
-            throw new Exception( "Invalid use of '/' for YAML-Path-RegExp. You provided new content for "+ YAMLPath.ROOTLEVEL +" .. .. but the YAML provided via --input cmdlime optiom is a SIMPLE SCALAR Node containing the string-value ["+ scaN.getValue() +"]  .. full Node details = ["+ scaN +"]");
+            throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "Invalid use of '/' for YAML-Path-RegExp. You provided new content for "+ YAMLPath.ROOTLEVEL +" .. .. but the YAML provided via --input cmdlime optiom is a SIMPLE SCALAR Node containing the string-value ["+ scaN.getValue() +"]  .. full Node details = ["+ scaN +"]");
         } else {
             throw new Exception( HDR +": Serious ERROR B: You provided new content for "+ YAMLPath.ROOTLEVEL +" .. .. but the YAML provided via --input cmdlime optiom is is of __UNKNOWN__ type ["+ _topmostNode.getClass().getName() +"]  with value = ["+ _topmostNode +"]");
         }
@@ -466,7 +466,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
             } else if ( this.newData2bInserted instanceof String ) {
                 prevchildelem = new ScalarNode( Tag.STR, this.newData2bInserted.toString(), null, null, this.dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.SINGLE_QUOTED
             } else {
-                throw new Exception( HDR +": Serious ERROR #2: You wanted to insert new content at "+ yp +" .. .. but provided content that is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted +"]");
+                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( HDR +": Serious ERROR #2: You wanted to insert new content at "+ yp +" .. .. but provided content that is of type ["+ this.newData2bInserted.getClass().getName() +"]  with value = ["+ this.newData2bInserted +"]");
             }
 
             for( int ix=yp.yamlElemArr.length - 1;   ix > yp.index() ; ix-- ) {
@@ -538,7 +538,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                     } else if ( NodeTools.isEmptyNodeYAML( prevchildelem ) ) {
                         // do Nothing.  This is useful within BATCH YAML commands, when we can have 'missing' YAML show up as 'EmptyYAML' (to prevent Null Pointers)
                     } else {
-                        throw new Exception( "The existing node @ LHS="+ keyAsStr +" RHS that is a 'Map', but the new content is NOT a 'Map'.  Instead it is of type '"+ valN.getNodeId() +"'. For Insert/ReplaceCommand, that is unacceptable." );
+                        throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "The existing node @ LHS="+ keyAsStr +" RHS that is a 'Map', but the new content is NOT a 'Map'.  Instead it is of type '"+ valN.getNodeId() +"'. For Insert/ReplaceCommand, that is unacceptable." );
                     }
 
                 } else if ( valN.getNodeId() == NodeId.scalar && valN instanceof ScalarNode ) {
@@ -553,7 +553,7 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
                         tuples.remove( ix + 1 ); // Now remove the PREVIOUSLY-EXISTING-NodeTuple, which got pushed to index-location (ix+1) --by the previous statement.
                     } else {
                         // System.err.println( HDR +" " );
-                        throw new Exception( "The existing node @ LHS="+ keyAsStr +" has an RHS with non-empty String/Scalar value of '"+ scalarValN.getValue() +"'. For insertCommand, that is unacceptable.  RHS should be either blank/'' or an org.yaml.snakeyaml.nodes.MappingNode!  " );
+                        throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "The existing node @ LHS="+ keyAsStr +" has an RHS with non-empty String/Scalar value of '"+ scalarValN.getValue() +"'. For insertCommand, that is unacceptable.  RHS should be either blank/'' or an org.yaml.snakeyaml.nodes.MappingNode!  " );
                     }
 
                 } else if ( valN.getNodeId() == NodeId.sequence && valN instanceof SequenceNode ) {
@@ -566,11 +566,11 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
 
                 } else {
                     // valN is neither MappingNode nor a ScalarNode
-                    throw new Exception( "The existing node @ LHS="+ keyAsStr +" has an RHS is of type="+ valN.getNodeId() +" and value='"+ valN +"'. For insert /Replace Command, Not sure how to handle this!  " );
+                    throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "The existing node @ LHS="+ keyAsStr +" has an RHS is of type="+ valN.getNodeId() +" and value='"+ valN +"'. For insert /Replace Command, Not sure how to handle this!  " );
                 }
             }
         } else {
-            throw new Exception( "Serious ERROR #3: You wanted to insert new content at "+ _lhsKeyStr +" .. .. but the Node at that LOCATION .. is of type ["+ lowestExistingNode.getClass().getName() +"]  with value = ["+ lowestExistingNode +"]");
+            throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "Serious ERROR #3: You wanted to insert new content at "+ _lhsKeyStr +" .. .. but the Node at that LOCATION .. is of type ["+ lowestExistingNode.getClass().getName() +"]  with value = ["+ lowestExistingNode +"]");
         }
     }
 
