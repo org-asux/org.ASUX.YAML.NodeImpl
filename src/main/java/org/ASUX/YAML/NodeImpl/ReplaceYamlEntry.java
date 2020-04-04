@@ -135,14 +135,14 @@ public class ReplaceYamlEntry extends InsertYamlEntry {
 
         // Step 1: In case '/' is the YAML-Path-RegExp .. do it first .. before ANY CHecks (steps 2 & beyond)
         if ( YAMLPath.ROOTLEVEL.equals( _yamlPath.getRaw() ) ) // '/' is exactly the entire YAML-Path pattern provided by the user on the cmd line
-            throw new Exception( "Replace command does NOT support "+ YAMLPath.ROOTLEVEL +" as YAML-Path-RegularExpression.  use 'useAsInput' Batch-command instead."  );
+            throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "Replace command does NOT support "+ YAMLPath.ROOTLEVEL +" as YAML-Path-RegularExpression.  use 'useAsInput' Batch-command instead."  );
 
         //-------------------------------------------------
         // Now that the AbstractYamlProcessor.java has recursively parsed the entire YAML.. .. we need to find out if there were ANY matches.
         // Next Step: Check to see if the YAML-Path-RegExp did match any rows.
         // We should NOT be silently returning the input-YAML AS-IS
         if ( this.existingPathsForInsertion.size() <= 0 ) {
-            throw new Exception( " No matches were found For RegExp="+ super.getYAMLPath() +" and for the input-YAML :-\n"+ NodeTools.Node2YAMLString( _topmostNode )  );
+            throw new org.ASUX.yaml.InvalidCmdLineArgumentException( " No matches were found For RegExp="+ super.getYAMLPath() +" and for the input-YAML :-\n"+ NodeTools.Node2YAMLString( _topmostNode )  );
             // Unlike Insert COMMAND, if there are NO Matches, we will NOT create paths (like 'mkdir -p');   Hence this exception MUST be thrown.
             // if user does NOT want exception, then they MUST list-Command to see if there was any rows returned before calling this Replace-Command
         } else {
