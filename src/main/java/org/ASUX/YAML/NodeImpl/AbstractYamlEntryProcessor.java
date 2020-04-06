@@ -138,7 +138,7 @@ public abstract class AbstractYamlEntryProcessor {
      *
      * <p>Do NOT fuck with (a.k.a alter) the contents of any of the parameters passed.   Use the parameters ONLY in Read-only manner.  Got itchy fingers?  Then, Deepclone both the parameters.  YAMLPath class has a static member-function to make it easy to deepClone.</p>
      *  @param _yamlPath See the class YAMLPath @see org.ASUX.yaml.YAMLPath
-     *  @param _newIndex the index of a YAML-SequenceNode that the user has provided in YAML-Path, but which is > the # of elements of that YAML-SequenceNode
+     *  @param _newIndex the index of a YAML-SequenceNode that the user has provided in YAML-Path, but which is &gt; the # of elements of that YAML-SequenceNode
      *  @param _parentSeqNode Will be a Not-Null reference to a org.yaml.snakeyaml.nodes.SequenceNode instance
      *  @param _end2EndPaths for _yamlPathStr, this java.util.LinkedList shows the "stack of matches".   Example:  ["paths", "/pet", "get", "responses", "200"]
      *  @return The concrete sub-class can return false, to STOP any further progress on this partial match
