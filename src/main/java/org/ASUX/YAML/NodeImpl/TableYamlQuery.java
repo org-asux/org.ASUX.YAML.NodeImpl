@@ -69,9 +69,9 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     /** How many 'row/lines' matches happened.  This value should be identical to this.getOutput.size(). Value obtained using {@link #getCount()}*/
     protected int count;
     /** By design, this class is supposed to collect a SIMPLE TABULAR arrangement of Strings */
-    protected LinkedList< ArrayList<String> > output;
-    /** The _EXACT_ same content as in 'this.output' .. but, this time in SnakeYAML data-model. */
-    protected SequenceNode outputAsNode;
+    protected LinkedList< ArrayList<String> > outputAsStrings;
+    /** The _EXACT_ same content as in 'this.outputAsStrings' .. but, this time in SnakeYAML data-model. */
+    protected SequenceNode output;
 
     //------------------------------------------------------------------------------
     public static class TableCmdException extends Exception {
@@ -135,8 +135,8 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
     @Override
     public void reset() {
         this.count = 0;
-        this.output = new LinkedList<>();
-        this.outputAsNode = new SequenceNode( Tag.SEQ, false, new LinkedList<>(),  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
+        this.outputAsStrings = new LinkedList<>();
+        this.output = new SequenceNode( Tag.SEQ, false, new LinkedList<>(),  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
         // this.tableColumns <-- can ONLY be changed via Constructor, as it's NOT publicly accesible instance-variable, and currently NO setter() exists.
     }
 
@@ -206,42 +206,69 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
                         final ReadYamlEntry readYE = new ReadYamlEntry( claRead, dumperoptions );
 
                         if ( yp.yamlElemArr.length == 1 && "..".equals( yp.yamlElemArr[0] ) ) {
-                            // "_parentNode" won't fit into the expected data-types within the "output" instance-variable of the main-class of this file
+                            // "_parentNode" won't fit into the expected data-types within the "outputAsStrings" instance-variable of the main-class of this file
                             throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#1) At that location canNOT give you a scalar at '"+ col +"' provided to Table-query Command." );
 
                         } else if ( yp.yamlElemArr.length > 1 && "..".equals(yp.yamlElemArr[0]) ) {
-                            // throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].  (#2) Unimplemented support for '..' PREFIX within YAML-Path provided '"+ col +"." );
-
                             // strip out the initial '..' in the YAML-path denoted by 'col'
                             // Lookup up within parentNode
                             yp.hasNext();
                             if ( verbose ) System.out.println( HDR2 +" yp='"+ yp +"' and yp.getSuffix()="+ yp.getSuffix() );
 
                             readYE.searchYamlForPattern( _parentNode, yp.getSuffix(), subDelimiter );
-                            final SequenceNode seqN1 = readYE.getOutput();
+                            final Node n1 = readYE.getOutput();
+                            if ( verbose ) System.out.println( "yp = '" + yp + "'\nn1 = " + NodeTools.Node2YAMLString( n1 ) + "\n" );
+
                             // The lookup @ 'col' a.k.a better be a ScalarNode only.  Obviously, by definition, a single ScalarMode only.
-                            if ( seqN1.getValue().size() != 1 ||   !  (seqN1.getValue().get(0) instanceof ScalarNode)   ) {
-                                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#2) At that location canNOT pick a SINGLE scalar at '"+ col +"' provided to Table-query Command." );
-                            } else {
-                                final ScalarNode sn1 = (ScalarNode) seqN1.getValue().get(0);
-                                tableRow.add( sn1.getValue() );
-                                final ScalarNode newSN = new ScalarNode( Tag.STR,     sn1.getValue(),     null, null, dumperoptions.getDefaultScalarStyle() );
+
+                            if ( n1.getNodeId() == NodeId.sequence && n1 instanceof SequenceNode ) {
+                                final SequenceNode seqN1 = ( SequenceNode ) n1;
+                                if ( seqN1.getValue().size() != 1 || !( seqN1.getValue().get( 0 ) instanceof ScalarNode ) ) {
+                                    throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#2) At that location canNOT pick a SINGLE scalar at '" + col + "' provided to Table-query Command." );
+                                } else {
+                                    final ScalarNode sn1 = ( ScalarNode ) seqN1.getValue().get( 0 );
+                                    tableRow.add( sn1.getValue() );
+                                    final ScalarNode newSN = new ScalarNode( Tag.STR, sn1.getValue(), null, null, dumperoptions.getDefaultScalarStyle() );
+                                    tableRowNodeObjs.add( newSN );
+                                } // if-else (above 5 lines)
+                            } else if ( n1.getNodeId() == NodeId.mapping && n1 instanceof MappingNode ) {
+                                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#3) At that location canNOT pick a SINGLE scalar at '" + col + "' provided to Table-query Command." );
+                            } else if ( n1.getNodeId() == NodeId.scalar && n1 instanceof ScalarNode ) {
+                                final ScalarNode sn2 = ( ScalarNode ) n1;
+                                tableRow.add( sn2.getValue() );
+                                final ScalarNode newSN = new ScalarNode( Tag.STR,     sn2.getValue(),     null, null, dumperoptions.getDefaultScalarStyle() );
                                 tableRowNodeObjs.add( newSN );
-                            } // if-else (above 5 lines)
+                            } else {
+                                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#5) At that location canNOT pick a SINGLE scalar at '" + col + "' provided to Table-query Command." );
+                            }
 
                         } else {
+
                             // the YAML-path denoted by 'col' does _NOT_ begin with '..'
                             if ( verbose ) System.out.println( "_mapnode = "+ NodeTools.Node2YAMLString( _mapnode ) + "\n" );
                             readYE.recursiveSearch( _mapnode,   yp,  null,  new LinkedList<>() );
-                            final SequenceNode seqN2 = readYE.getOutput();
-                            if ( verbose ) System.out.println( "yp = '"+ yp +"'\nseqN2 = "+ NodeTools.Node2YAMLString( seqN2 ) + "\n" );
-                            if ( seqN2 == null || seqN2.getValue().size() != 1 ||    !  (seqN2.getValue().get(0) instanceof ScalarNode)   ) {
-                                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#3) At that location canNOT pick a SINGLE scalar at '"+ col +"' provided to Table-query Command." );
-                            } else {
-                                final ScalarNode sn2 = (ScalarNode) seqN2.getValue().get(0);
+                            final Node n2 = readYE.getOutput();
+                            if ( verbose ) System.out.println( "yp = '" + yp + "'\nn2 = " + NodeTools.Node2YAMLString( n2 ) + "\n" );
+
+                            if ( n2.getNodeId() == NodeId.sequence && n2 instanceof SequenceNode ) {
+                                final SequenceNode seqN2 = ( SequenceNode ) n2;
+                                if ( seqN2 == null || seqN2.getValue().size() != 1 || !( seqN2.getValue().get( 0 ) instanceof ScalarNode ) ) {
+                                    throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#6) At that location canNOT pick a SINGLE scalar at '" + col + "' provided to Table-query Command." );
+                                } else {
+                                    final ScalarNode sn2 = ( ScalarNode ) seqN2.getValue().get( 0 );
+                                    tableRow.add( sn2.getValue() );
+                                    final ScalarNode newSN = new ScalarNode( Tag.STR,     sn2.getValue(),     null, null, dumperoptions.getDefaultScalarStyle() );
+                                    tableRowNodeObjs.add( newSN );
+                                }
+                            } else if ( n2.getNodeId() == NodeId.mapping && n2 instanceof MappingNode ) {
+                                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#8) At that location canNOT pick a SINGLE scalar at '" + col + "' provided to Table-query Command." );
+                            } else if ( n2.getNodeId() == NodeId.scalar && n2 instanceof ScalarNode ) {
+                                final ScalarNode sn2 = ( ScalarNode ) n2;
                                 tableRow.add( sn2.getValue() );
-                                // final ScalarNode newSN = new ScalarNode( Tag.STR,     sn2.getValue(),     null, null, dumperoptions.getDefaultScalarStyle() );
-                                // tableRowNodeObjs.add( newSN );
+                                final ScalarNode newSN = new ScalarNode( Tag.STR,     sn2.getValue(),     null, null, dumperoptions.getDefaultScalarStyle() );
+                                tableRowNodeObjs.add( newSN );
+                            } else {
+                                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( _errmsg + "].\n\t(#9) At that location canNOT pick a SINGLE scalar at '" + col + "' provided to Table-query Command." );
                             }
                         }
 
@@ -289,12 +316,12 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
                 // if we are here, ALL the 'columns' of the tabular-output were found (if not, an exception is thrown)
                 count ++;
 
-                // ATTENTION !!!! "this.output" won't work within an INLINE-class.  So, hope you realize "output" refers to the Java-class that this file is about.
-                output.add( tableRow ); // could be a string or a java.util.LinkedHashMap&lt;String, Object&gt;
+                // ATTENTION !!!! "this.outputAsStrings" won't work within an INLINE-class.  So, hope you realize "outputAsStrings" refers to the Java-class that this file is about.
+                outputAsStrings.add( tableRow ); // could be a string or a java.util.LinkedHashMap&lt;String, Object&gt;
 
                 final SequenceNode tableRowAsNode = new SequenceNode( Tag.SEQ, false, tableRowNodeObjs,  null, null, dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
-                // NOTE: cannot write 'this.outputAsNode' - in line below.  As this line of code is within a temporary inner-class
-                final java.util.List<Node> seqs = outputAsNode.getValue();   // FYI: 'this.outputAsNode' wont compile within this inline-class
+                // NOTE: cannot write 'this.' - in line below.  As this line of code is within a temporary inner-class
+                final java.util.List<Node> seqs = output.getValue();   // FYI: 'this.output' wont compile within this inline-class
                 seqs.add( tableRowAsNode );
 
             } // go() function
@@ -353,12 +380,12 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
         if ( super.showStats ) System.out.println("Total=" + this.count );
 
         if ( this.verbose ) {
-            // for( ArrayList<String> arr: this.output ) {
+            // for( ArrayList<String> arr: this.outputAsStrings ) {
             //     arr.forEach( s -> System.out.print(s+"\t") );
             //     System.out.println();
             // } // for
             // The above commented code will produce same output as the following for-loop - ONLY if Scalar 2D-array output.  In case the 'cells' in the 'table' are NOT ScalarNodes, the code below does a far better job of producing human-readable debugging-output.
-            final java.util.List<Node> seqs = this.outputAsNode.getValue();
+            final java.util.List<Node> seqs = this.output.getValue();
             for (final Node seqItemNode : seqs) {
                 if (seqItemNode.getNodeId() == NodeId.scalar && seqItemNode instanceof ScalarNode) {
                     final ScalarNode scN = (ScalarNode) seqItemNode;
@@ -381,18 +408,18 @@ public class TableYamlQuery extends AbstractYamlEntryProcessor {
         return this.count;
     }
 
-    /**
-     * @return the output as an LinkedList of objects (either Strings or java.util.LinkedHashMap&lt;String, Object&gt; objects).  This is because the 'rhs' of an 
-     */
-    public LinkedList< ArrayList<String> > getOutputAsJavaCollection() {
-        return this.output;
-    }
+    // /**
+    //  * @return the output as an LinkedList of objects (either Strings or java.util.LinkedHashMap&lt;String, Object&gt; objects).  This is because the 'rhs' of an
+    //  */
+    // public LinkedList< ArrayList<String> > getOutputAsJavaCollection() {
+    //     return this.outputAsStrings;
+    // }
 
     /**
      * @return the output as an LinkedList of objects (either Strings or java.util.LinkedHashMap&lt;String, Object&gt; objects).  This is because the 'rhs' of an 
      */
     public Node getOutput() {
-        return this.outputAsNode;
+        return this.output;
     }
 
     //=================================================================================
