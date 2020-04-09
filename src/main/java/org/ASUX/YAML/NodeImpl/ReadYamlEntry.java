@@ -37,16 +37,13 @@ import org.ASUX.yaml.YAMLPath;
 import java.util.LinkedList;
 
 // https://yaml.org/spec/1.2/spec.html#id2762107
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.composer.Composer;
-import org.yaml.snakeyaml.nodes.NodeTuple;
-import org.yaml.snakeyaml.nodes.NodeId;
 import org.yaml.snakeyaml.nodes.Node;
-import org.yaml.snakeyaml.nodes.ScalarNode;
-import org.yaml.snakeyaml.nodes.MappingNode;
+import org.yaml.snakeyaml.nodes.NodeId;
 import org.yaml.snakeyaml.nodes.SequenceNode;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
+
+import static org.junit.Assert.fail;
 
 
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.YAML.NodeImpl.AbstractYamlEntryProcessor}.</p>
@@ -84,7 +81,7 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
     @Override
     public void reset() {
         this.count = 0;
-        this.output = new SequenceNode( Tag.SEQ, false, new java.util.LinkedList<Node>(),  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
+        this.output = new SequenceNode( Tag.SEQ, false, new java.util.LinkedList<>(),  null, null, this.dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -145,23 +142,28 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
             readYE.recursiveSearch( _valNode, yp, null, new LinkedList<>());
         }
 
-        final SequenceNode seqN1 = readYE.getOutput();
-        if ( this.cmdLineArgs.verbose ) System.out.println( "seqN2 = "+ NodeTools.Node2YAMLString( seqN1 ) + "\n" );
+        final Node n1 = readYE.getOutput();
+        if ( this.cmdLineArgs.verbose ) System.out.println( "seqN2 = "+ NodeTools.Node2YAMLString( n1 ) + "\n" );
 
-        if ( seqN1.getValue().size() < 1 ) {
-            StringBuilder errMsgBuf = new StringBuilder( "ERROR: " );
-            if ( this.cmdLineArgs.verbose ) errMsgBuf.append( HDR );
-            errMsgBuf.append( "For the pattern provided on cmdline as YAML-Path " + _yamlPath.yamlPathStr + " .. .. we found [" );
-            for( String s: _end2EndPaths )
-                errMsgBuf.append(s).append( this.cmdLineArgs.yamlPatternDelimiter );
-            final String errMsg = errMsgBuf.toString();
-            throw new org.ASUX.yaml.InvalidCmdLineArgumentException( errMsg + "].\n\tAt that location canNOT find anything at '"+ this.cmdLineArgs.projectionPath +"' provided via the --projection cmd-line argument." );
+        if ( n1.getNodeId() == NodeId.sequence && n1 instanceof SequenceNode ) {
+            final SequenceNode seqN1 = ( SequenceNode ) n1;
+            if ( seqN1.getValue().size() < 1 ) { // is empty
+                StringBuilder errMsgBuf = new StringBuilder( "ERROR: " );
+                if ( this.cmdLineArgs.verbose ) errMsgBuf.append( HDR );
+                errMsgBuf.append( "For the pattern provided on cmdline as YAML-Path " ).append( _yamlPath.yamlPathStr ).append( " .. .. we found [" );
+                for ( String s : _end2EndPaths )
+                    errMsgBuf.append( s ).append( this.cmdLineArgs.yamlPatternDelimiter );
+                final String errMsg = errMsgBuf.toString();
+                throw new org.ASUX.yaml.InvalidCmdLineArgumentException( errMsg + "].\n\tAt that location canNOT find anything at '" + this.cmdLineArgs.projectionPath + "' provided via the --projection cmd-line argument." );
+            } else {
+                for ( Node n : seqN1.getValue() ) {
+                    final Node newN = NodeTools.deepClone( n );
+                    this.output.getValue().add( newN );
+                } // for-loop
+            } // if-else (above 11 lines)
         } else {
-            for ( Node n:  seqN1.getValue() ) {
-                final Node newN = NodeTools.deepClone( n );
-                this.output.getValue().add( newN );
-            } // for-loop
-        } // if-else (above 11 lines)
+            this.output.getValue().add( n1 );
+        }
 
         return true;
     }
@@ -199,8 +201,14 @@ public class ReadYamlEntry extends AbstractYamlEntryProcessor {
     /**
      * @return the output as an Node/YAML of content (either Strings or sub-Node).  This is because the 'rhs' of a YAML-line can be either of the two
      */
-    public SequenceNode getOutput() {
-        return this.output;
+    public Node getOutput() {
+        try {
+            return NodeTools.singletonCheck( this.verbose, this.output );
+        } catch ( Exception e ) {
+            e.printStackTrace();
+        }
+        fail();
+        return null; // should Not be here
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
