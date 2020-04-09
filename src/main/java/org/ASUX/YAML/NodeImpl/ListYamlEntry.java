@@ -47,6 +47,8 @@ import org.yaml.snakeyaml.nodes.SequenceNode;
 import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
+import static org.junit.Assert.fail;
+
 
 /** <p>This concrete class is minimalistic because I am re-using code to query/traverse a YAML file.   See it's parent-class {@link org.ASUX.YAML.NodeImpl.AbstractYamlEntryProcessor}.</p>
  *  <p>This concrete class is part of a set of 4 concrete sub-classes (representing YAML-COMMANDS to read/query, list, delete and replace ).</p>
@@ -161,8 +163,14 @@ public class ListYamlEntry extends AbstractYamlEntryProcessor {
     /**
      * @return the output as an SequenceNode containing just Strings  This is because the 'lhs' of an YAML file is always a string.
      */
-    public SequenceNode getOutput() {
-        return this.output;
+    public Node getOutput() {
+        try {
+            return NodeTools.singletonCheck( this.verbose, this.output );
+        } catch ( Exception e ) {
+            e.printStackTrace();
+        }
+        fail();
+        return null; // should Not be here
     }
 
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
