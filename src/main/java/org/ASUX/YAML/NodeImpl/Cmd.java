@@ -210,29 +210,17 @@ public class Cmd {
             // post-completion of YAML-Cmd processing
             if ( output != null ) {
                 switch ( _cmdLineArgs.cmdType ) {
-                    case READ:
-                    case LIST:
-                    case TABLE:
                     case DELETE:
                     case INSERT:
                     case REPLACE:
                     case MACRO:
                     case MACROYAML:
                     case BATCH:
-                        Object humanFriendlyOutput = output; // if we have an array of just 1 element, let's dump the element and NOT the array.
-                        if ( output instanceof SequenceNode ) {
-                            final SequenceNode seqnode = (SequenceNode) output;
-                            final java.util.List<Node> seqs = seqnode.getValue();
-                            if (_cmdLineArgs.verbose) System.out.println( HDR +" Human-friendly output possible.  SequenceNode has "+ seqs.size() +"elements." );
-                            if ( seqs.size() == 1 ) {  // if it's a single 'item' that we found.. provide the user a more humanly-meaningful format. .. .. just provide that single element/Node.
-                                // if ( seqs.get(0) instanceof ScalarNode ) { // we don't care if it's a ScalarNode, MappingNode or SequenceNode
-                                humanFriendlyOutput = seqs.get(0);
-                                // } // 2nd inner if
-                            } // 1st inner if
-                        } // outermost if
-
-                        if (_cmdLineArgs.verbose) System.out.println( HDR +" final output is of type "+ humanFriendlyOutput.getClass().getName() +"]" );
-                        cmdinvoker.getYAMLImplementation().write( javawriter, humanFriendlyOutput );
+                    case READ:
+                    case LIST:
+                    case TABLE:
+                        if (_cmdLineArgs.verbose) System.out.println( HDR +" final output is of type "+ output.getClass().getName() +"]" );
+                        cmdinvoker.getYAMLImplementation().write( javawriter, output );
                         break;
                 } // switch
             } // if output != null
