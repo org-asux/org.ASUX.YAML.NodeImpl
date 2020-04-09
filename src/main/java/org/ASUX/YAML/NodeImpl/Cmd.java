@@ -32,35 +32,15 @@
 
 package org.ASUX.YAML.NodeImpl;
 
-import org.ASUX.common.Debug;
-
 import org.ASUX.yaml.YAMLCmdANTLR4Parser;
 import org.ASUX.yaml.YAMLPath;
 import org.ASUX.yaml.YAML_Libraries;
 import org.ASUX.yaml.YAMLImplementation;
 
-import java.io.InputStreamReader;
-import java.io.FileInputStream;
-import java.io.InputStream;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.Arrays;
-
 // https://yaml.org/spec/1.2/spec.html#id2762107
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.composer.Composer;
-import org.yaml.snakeyaml.nodes.NodeTuple;
-import org.yaml.snakeyaml.nodes.NodeId;
 import org.yaml.snakeyaml.nodes.Node;
-import org.yaml.snakeyaml.nodes.ScalarNode;
-import org.yaml.snakeyaml.nodes.MappingNode;
 import org.yaml.snakeyaml.nodes.SequenceNode;
-import org.yaml.snakeyaml.constructor.Constructor;
-import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/error/Mark.java
-import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
-import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
@@ -139,7 +119,7 @@ public class Cmd {
             case SINGLE_QUOTED: nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.SINGLE_QUOTED );  break;
             case LITERAL:       nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.LITERAL );        break;
             case PLAIN:         nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.PLAIN );          break;
-            case FOLDED:        nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
+            case FOLDED:        // nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
             default:            nt.getDumperOptions().setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
         }
 
@@ -318,30 +298,6 @@ public class Cmd {
     public static void main( String[] args )
     {
         org.ASUX.yaml.Cmd.main( args );
-
-        // final String HDR = CLASSNAME + ": main(String[]): ";
-        // org.ASUX.yaml.CmdLineArgs cmdLineArgs = null;
-        // org.ASUX.yaml.CmdLineArgsBasic cmdLineArgsBasic = null;
-        //
-        // try {
-        //     // cmdLineArgs = CmdLineArgs.create( args );
-        //     cmdLineArgsBasic = new org.ASUX.yaml.CmdLineArgsBasic();
-        //     cmdLineArgsBasic.parse( args );
-        //     // Until we get past the above statement, we don't know about 'verbose'
-        //     if (cmdLineArgsBasic.verbose) { System.out.print( HDR +" >>>>>>>>>>>>> "); for( String s: args) System.out.print(s);  System.out.println(); }
-        //
-        //     new YAMLCmdANTLR4Parser( cmdLineArgsBasic.verbose ).parseYamlCommandLine( String.join(" ", args) );
-        //
-        // } catch (Exception e) {
-        //     if ( cmdLineArgs == null || cmdLineArgs.verbose ) e.printStackTrace(System.err);
-        //     System.err.println( e +"\n"+ HDR +"\n\nINTERNAL ERROR!\tFYI: Cmdline arguments provided are: " + cmdLineArgs + "\n" );
-        //     System.exit(6);
-        // } catch (Throwable t) {
-        //     t.printStackTrace(System.err); // main() unit-testing
-        //     System.err.println( t +"\n"+ HDR +"\n\nINTERNAL ERROR!\tFYI: Cmdline arguments provided are: " + cmdLineArgs + "\n" );
-        //     System.exit(6);
-        // }
-
     } // main()
 
 }
