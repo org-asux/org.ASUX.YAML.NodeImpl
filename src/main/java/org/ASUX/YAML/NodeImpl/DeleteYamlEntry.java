@@ -36,7 +36,9 @@ import org.ASUX.yaml.YAMLPath;
 
 import org.ASUX.common.Tuple;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 // https://yaml.org/spec/1.2/spec.html#id2762107
 import org.yaml.snakeyaml.Yaml;
@@ -107,10 +109,10 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
             System.out.print("onEnd2EndMatch: _end2EndPaths =");
         if ( this.verbose || this.showStats ) {
             _end2EndPaths.forEach( s -> System.out.print(s+", ") );
-            System.out.println("");
+            System.out.println();
         }
 
-        this.keys2bRemoved.add( new Tuple< Node, Object>( _parentNode, _key ) );
+        this.keys2bRemoved.add( new Tuple<>( _parentNode, _key ) );
         if ( this.verbose ) System.out.println( CLASSNAME +": onE2EMatch: count="+this.keys2bRemoved.size());
         return true;
     }
@@ -132,15 +134,14 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
      * You can fuck with the contents of any of the parameters passed, to your heart's content.
      */
     protected void atEndOfInput( final Node _node, final YAMLPath _yamlPath ) throws Exception
-    {    
-        if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): count=" + this.keys2bRemoved.size() );
+    {   final String HDR = CLASSNAME +" atEndOfInput("+_yamlPath+"): ";
+        if ( this.verbose ) System.out.println( HDR +"count=" + this.keys2bRemoved.size() );
         for ( Tuple< Node, Object> tpl: this.keys2bRemoved ) {
             final Node parentN = tpl.key;
             // final String rhsStr = tpl.val.toString();
             if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): item["+ tpl.val.getClass().getName() +"]= "+ tpl.val +"  within parentN["+ parentN.getClass().getName() +"]="+ tpl.key +" " );
             // if ( this.verbose ) System.out.println( CLASSNAME +": atEndOfInput(): atEndOfInput: parentN="+ tpl.key +": item["+ tpl.val.getClass().getName() +"]= "+ rhsStr.substring(0,rhsStr.length()>121?120:rhsStr.length()));
             if ( tpl.val instanceof String && parentN instanceof MappingNode ) {
-                assertTrue( tpl.val instanceof String ); 
                 final String key2Search = (String) tpl.val;
 
                 final MappingNode mapN = (MappingNode) parentN;
@@ -152,31 +153,32 @@ public class DeleteYamlEntry extends AbstractYamlEntryProcessor {
                     ix ++;
                     final Node keyN = kv.getKeyNode();
                     assertTrue( keyN instanceof ScalarNode );
-                    assertTrue( keyN.getNodeId() == NodeId.scalar );
+                    assertSame( keyN.getNodeId(), NodeId.scalar );
                     // @SuppressWarnings("unchecked")
                     final ScalarNode scalarN = (ScalarNode) keyN;
                     final String keyAsStr = scalarN.getValue();
-                    assertTrue( keyAsStr != null );
-                    if ( this.verbose ) System.out.println( CLASSNAME +" atEndOfInput(): found LHS, keyTag & RHS = ["+ keyN + "] !"+ scalarN.getTag().getValue() + " : "+ kv.getValueNode() + " ;" );
+                    assertNotNull( keyAsStr );
+                    if ( this.verbose ) System.out.println( HDR +"found LHS, keyTag & RHS = ["+ keyN + "]  has Tag = !"+ scalarN.getTag().getValue() + " :\n"+ kv.getValueNode() + " ;" );
                     if ( keyAsStr.equals(key2Search) ) {
                         bFound = true;
                         break;
                     }
-                } // for loop
+                } // INNERMOST for loop
+
                 if ( bFound )
                     tuples.remove( ix );
 
             } else if ( tpl.val instanceof Integer && parentN instanceof SequenceNode ) {
-                assertTrue( tpl.val instanceof Integer ); 
                 final Integer ix = (Integer) tpl.val;
 
                 final SequenceNode seqN = (SequenceNode) tpl.key;
                 final java.util.List<Node> seqs = seqN.getValue();
                 seqs.remove( ix.intValue() );
+
             } else {
-                throw new Exception( CLASSNAME +": atEndOfInput(): UNEXPECTED item["+ tpl.val.getClass().getName() +"]= "+ tpl.val +"  within parentN["+ parentN.getClass().getName() +"]="+ tpl.key +" " );
+                throw new Exception( HDR +"UNEXPECTED item["+ tpl.val.getClass().getName() +"]= "+ tpl.val +"  within parentN["+ parentN.getClass().getName() +"]="+ tpl.key +" " );
             }
-        } // for
+        } // OUTERMOST for loop
 
         // java's forEach never works if you are altering anything within the Lambda body
         // this.keys2bRemoved.forEach( tpl -> {tpl.val.remove(tpl.key); });
