@@ -289,52 +289,51 @@ public class InsertYamlEntry extends AbstractYamlEntryProcessor {
     protected void addContentAtSlash( final Node _topmostNode, final YAMLPath _yamlPath ) throws Exception
     {
         final String HDR = CLASSNAME + ": addContentAtSlash(): ";
+        final String rhsStr = _topmostNode.toString();
+        final String rhsStrDump2Output = rhsStr.substring(0, Math.min( rhsStr.length(), 256 ) ); // to make verbose logging code simpler to read
+        if ( this.verbose ) System.out.println( HDR +" _topmostNode="+ rhsStrDump2Output );
+
         final Node newNode2bInserted = validateNewContent( this.newData2bInserted );
 
         if ( _topmostNode instanceof MappingNode && _topmostNode.getNodeId() == NodeId.mapping ) {
-            final String rhsStr = _topmostNode.toString();
-            final String rhsStrDump2Output = rhsStr.substring(0, Math.min( rhsStr.length(), 256 ) ); // to make verbose logging code simpler to read
-            if ( this.verbose ) System.out.println( HDR +" _topmostNode="+ rhsStrDump2Output );
 
-            if ( _topmostNode instanceof MappingNode ) {
-                final MappingNode topmostMapN = (MappingNode) _topmostNode;
-                final java.util.List<NodeTuple> topmostMapTuples = topmostMapN.getValue();
-                if ( this.verbose ) System.out.println( HDR +" (topmostMapTuples == null) is "+ (topmostMapTuples == null) +" (topmostMapTuples is empty) is "+ topmostMapTuples.size() );
+            final MappingNode topmostMapN = (MappingNode) _topmostNode;
+            final java.util.List<NodeTuple> topmostMapTuples = topmostMapN.getValue();
+            if ( this.verbose ) System.out.println( HDR +" (topmostMapTuples == null) is "+ (topmostMapTuples == null) +" (topmostMapTuples is empty) is "+ topmostMapTuples.size() );
 
-                if ( topmostMapTuples == null || topmostMapTuples.size() == 0 ) {
-                    this.output = (Node) this.newData2bInserted; // We're SWITCHING the topmost node!!!
+            if ( topmostMapTuples == null || topmostMapTuples.size() == 0 ) {
+                this.output = (Node) this.newData2bInserted; // We're SWITCHING the topmost node!!!
+            } else {
+                if ( newNode2bInserted instanceof MappingNode ) {
+                    final MappingNode newMapN = ( MappingNode ) this.newData2bInserted;
+                    final java.util.List<NodeTuple> newTuples = newMapN.getValue();
+                    topmostMapTuples.addAll( newTuples );
                 } else {
-                    if ( newNode2bInserted instanceof MappingNode ) {
-                        final MappingNode newMapN = ( MappingNode ) this.newData2bInserted;
-                        final java.util.List<NodeTuple> newTuples = newMapN.getValue();
-                        topmostMapTuples.addAll( newTuples );
-                    } else {
-                        throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "Invalid combination of new content and --input.  You provided new-content for " + YAMLPath.ROOTLEVEL + " .. .. but provided new-content is NOT a proper 'Map' YAML. Instead new-content is of type [" + this.newData2bInserted.getClass().getName() + "]  with value = [" + this.newData2bInserted.toString() + "]" );
-                    }
-                } // if topmostMapTuples == null
-            }
-            if ( _topmostNode instanceof SequenceNode ) {
-                final SequenceNode topmostSequence = (SequenceNode) _topmostNode;
-                final java.util.List<Node> topmostSeqList = topmostSequence.getValue();
-                if ( this.verbose ) System.out.println( HDR +" (topmostSeqList == null) is "+ (topmostSeqList == null) +" (topmostSeqList is empty) is "+ topmostSeqList.size() );
+                    throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "Invalid combination of new content and --input.  You provided new-content for " + YAMLPath.ROOTLEVEL + " .. .. but provided new-content is NOT a proper 'Map' YAML. Instead new-content is of type [" + this.newData2bInserted.getClass().getName() + "]  with value = [" + this.newData2bInserted.toString() + "]" );
+                }
+            } // if topmostMapTuples == null
 
-                if ( topmostSeqList == null || topmostSeqList.size() == 0 ) {
-                    this.output = (Node) this.newData2bInserted; // We're SWITCHING the topmost node!!!
+        } else if ( _topmostNode instanceof SequenceNode ) {
+
+            final SequenceNode topmostSequence = (SequenceNode) _topmostNode;
+            final java.util.List<Node> topmostSeqList = topmostSequence.getValue();
+            if ( this.verbose ) System.out.println( HDR +" (topmostSeqList == null) is "+ (topmostSeqList == null) +" (topmostSeqList is empty) is "+ topmostSeqList.size() );
+
+            if ( topmostSeqList == null || topmostSeqList.size() == 0 ) {
+                this.output = (Node) this.newData2bInserted; // We're SWITCHING the topmost node!!!
+            } else {
+                if ( newNode2bInserted instanceof SequenceNode ) {
+                    final SequenceNode newSeqN = ( SequenceNode ) this.newData2bInserted;
+                    final java.util.List<Node> newNodeList = newSeqN.getValue();
+                    topmostSeqList.addAll( newNodeList );
                 } else {
-                    if ( newNode2bInserted instanceof SequenceNode ) {
-                        final SequenceNode newSeqN = ( SequenceNode ) this.newData2bInserted;
-                        final java.util.List<Node> newNodeList = newSeqN.getValue();
-                        topmostSeqList.addAll( newNodeList );
-                    } else {
-                        throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "Invalid combination of new content and --input.  You provided new-content for " + YAMLPath.ROOTLEVEL + " .. .. but provided new-content is NOT a proper 'Map' YAML. Instead new-content is of type [" + this.newData2bInserted.getClass().getName() + "]  with value = [" + this.newData2bInserted.toString() + "]" );
-                    }
-                } // if topmostMapTuples == null
-            }
+                    final SequenceNode seqN = (SequenceNode) _topmostNode;
+                    final java.util.List<Node> seqs = seqN.getValue();
+                    seqs.add( newNode2bInserted );
+                    // throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "Invalid combination of new content and --input.  You provided new-content for " + YAMLPath.ROOTLEVEL + " .. .. but provided new-content is NOT a proper 'Map' YAML. Instead new-content is of type [" + this.newData2bInserted.getClass().getName() + "]  with value = [" + this.newData2bInserted.toString() + "]" );
+                }
+            } // if topmostMapTuples == null
 
-        } else if ( _topmostNode instanceof SequenceNode && _topmostNode.getNodeId() == NodeId.sequence ) {
-            final SequenceNode seqN = (SequenceNode) _topmostNode;
-            final java.util.List<Node> seqs = seqN.getValue();
-            seqs.add( newNode2bInserted );
         } else if ( _topmostNode instanceof ScalarNode && _topmostNode.getNodeId() == NodeId.scalar ) {
             final ScalarNode scaN = (ScalarNode) _topmostNode;
             throw new org.ASUX.yaml.InvalidCmdLineArgumentException( "Invalid use of '/' for YAML-Path-RegExp. You provided new content for "+ YAMLPath.ROOTLEVEL +" .. .. but the YAML provided via --input cmdlime optiom is a SIMPLE SCALAR Node containing the string-value ["+ scaN.getValue() +"]  .. full Node details = ["+ scaN +"]");
