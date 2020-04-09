@@ -32,9 +32,6 @@
 
 package org.ASUX.YAML.NodeImpl;
 
-import org.ASUX.common.Tuple;
-import org.ASUX.common.Output;
-
 import org.ASUX.yaml.Enums;
 import org.ASUX.yaml.JSONTools;
 import org.ASUX.yaml.YAML_Libraries;
@@ -43,7 +40,6 @@ import java.util.List;
 import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.Properties;
 
 // https://yaml.org/spec/1.2/spec.html#id2762107
 import org.yaml.snakeyaml.nodes.NodeTuple;
@@ -53,8 +49,6 @@ import org.yaml.snakeyaml.nodes.ScalarNode;
 import org.yaml.snakeyaml.nodes.MappingNode;
 import org.yaml.snakeyaml.nodes.SequenceNode;
 import org.yaml.snakeyaml.nodes.Tag;
-import org.yaml.snakeyaml.constructor.Constructor;
-import org.yaml.snakeyaml.error.Mark; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/error/Mark.java
 import org.yaml.snakeyaml.DumperOptions; // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java
 
 
@@ -78,9 +72,15 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
     private static DumperOptions default_dumperopts = null;
     // Following static-code-block is to initialize 'this.default_dumperopts'
     static {
-        final String HDR = CLASSNAME + ": STATIC_INIT_CODE for NodeTools.default_dumperopts: ";
+        init_default_dumperopts();
+    }
+
+    private static void init_default_dumperopts()
+    {   final String HDR = CLASSNAME + ": STATIC_INIT_CODE for NodeTools.default_dumperopts: ";
+        if ( default_dumperopts != null )
+            return;
         try {
-            GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter();
+            default_dumperopts = GenericYAMLWriter.defaultConfigurationForSnakeYamlWriter();
         } catch( Exception e ){
             e.printStackTrace(System.err); // No 'verbose' variable present in Node2YAMLString(). printStackTrace() happens even if user did NOT ask for --verbose
             System.err.println( HDR +"!!!!!!! SERIOUS INTERNAL FAILURE !!!!!!!!" );
@@ -105,7 +105,8 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
      */
     @Override
     public boolean instanceof_YAMLImplClass( Object o ) {
-        return (o != null) && (o instanceof Node);
+        // return ( o != null ) && ( o instanceof Node );
+        return ( o instanceof Node );
     }
 
     /**
@@ -141,36 +142,43 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
      */
     @Override
     public ScalarNode getNewScalarEntry( final String _val ) {
-        final ScalarNode sn = new ScalarNode( Tag.STR, _val, null, null, this.getDumperOptions().getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.PLAIN
-        // final ScalarNode sn = new ScalarNode( Tag.STR, _val, null, null, NodeTools.getDefault DumperOptions().getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.PLAIN
-        return sn;
+        return /* final ScalarNode sn = */ new ScalarNode( Tag.STR, _val, null, null, this.getDumperOptions().getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.PLAIN
+        // return /* final ScalarNode sn = */ new ScalarNode( Tag.STR, _val, null, null, NodeTools.getDefault DumperOptions().getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.PLAIN
     }
 
     //==================================================================================
 
     /**
-     * A utility to help "map" the values of the enum {@link org.ASUX.yaml.Enums.ScalarStyle}, into the "language" of SnakeYAML implementation (see <a>https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java</a>)
-     * @param _dopt a NotNull org.yaml.snakeyaml.DumperOptions object-reference
-     * @param _orgASUXQuoteType an enum value - see {@link org.ASUX.yaml.Enums.ScalarStyle}
+     * if we have an array of just 1 element, let's dump the element and NOT the array.
+     * What if, the YAML-processing ACTUALLY returned a single-element array?
+     * Well! We'd have received -- from above cmdinvoker.processCommand() -- a SINGLE-element array containing __THAT__ single-element array !!!
+     *  @param _verbose Whether you want deluge of debug-output onto System.out.
+     *  @param _node A NotNull instance of org.yaml.snakeyaml.nodes.Node or its subclasses
+     *  @return org.yaml.snakeyaml.nodes.Node (either the original argument passed in, or the _ONLY_ Array-element in it)
      */
-    public static void updateDumperOptions( final DumperOptions _dopt, final Enums.ScalarStyle _orgASUXQuoteType ) {
-        switch( _orgASUXQuoteType ) {
-            case DOUBLE_QUOTED: _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.DOUBLE_QUOTED );  break;
-            case SINGLE_QUOTED: _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.SINGLE_QUOTED );  break;
-            case LITERAL:       _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.LITERAL );        break;
-            case FOLDED:        _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
-            case PLAIN:         _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.PLAIN );          break;
-            default:            _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
+    public static Node singletonCheck( final boolean _verbose, final Node _node )
+    {   final String HDR = CLASSNAME + ": singletonCheck(): ";
+        if (_verbose) System.out.println( HDR +" _node= "+ _node +"" );
+        try {
+            if (_verbose) System.out.println( HDR +" _node= "+ NodeTools.Node2YAMLString( _node ) +"" );
+        } catch ( Exception e ) {
+            e.printStackTrace( System.err );
+            System.err.println( HDR +" _node= "+ _node +"" );
+            throw new RuntimeException( "Serious Internal Error handling YAML strings!" );
         }
+        if ( _node instanceof SequenceNode ) {
+            final SequenceNode seqnode = (SequenceNode) _node;
+            final java.util.List<Node> seqs = seqnode.getValue();
+            if (_verbose) System.out.println( HDR +" Human-friendly output possible.  SequenceNode has "+ seqs.size() +"elements." );
+            if ( seqs.size() == 1 ) {  // if it's a single 'item' that we found.. provide the user a more humanly-meaningful format. .. .. just provide that single element/Node.
+                return seqs.get(0);
+            } // 1st inner if
+        } // outermost if
+
+        return _node; // return what we got via this method's invocation
     }
-    /**
-     * see {@link org.ASUX.yaml.YAMLImplementation#getNewSingleYAMLEntry}
-     */
-    @Override
-    public Node getNewSingleYAMLEntry( final String _newRootElemStr, final String _valElemStr ) {
-        // final DumperOptions dumperopts = NodeTools.getDefault DumperOptions();
-        return NodeTools.getNewSingleMap( _newRootElemStr, _valElemStr, this.getDumperOptions() );
-    }
+
+    //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
     /**
      * see {@link org.ASUX.yaml.YAMLImplementation#getScalarContent}
@@ -179,7 +187,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
     public String getScalarContent( final Node _n ) throws Exception {
         final String HDR = CLASSNAME + ": getScalarContent(_n): ";
         if ( this.verbose ) System.out.println( HDR +" provided argument =\n" + NodeTools.Node2YAMLString( _n ) + "\n");
-        assertTrue( _n != null );
+        assertNotNull( _n );
         if ( _n instanceof ScalarNode ) {
             final ScalarNode scalar = (ScalarNode) _n;
             return scalar.getValue();
@@ -206,14 +214,17 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
      */
     public static void setDefaultDumperOptions( final DumperOptions _d ) {
         NodeTools.default_dumperopts = _d;
-        assertTrue( NodeTools.default_dumperopts != null );
+        assertNotNull( NodeTools.default_dumperopts );
     }
 
     /**
      *  <p>The SnakeYAML implementation relies on <code>g.yaml.snakeyaml.DumperOptions</code> for allowing us to customize how YAML is outputted.</p>
      *  @return A non-null object.  This option is most valuable when you'll EVER save this new MappingNode into a file (or dump it to Stdout)
      */
-    public static DumperOptions getDefaultDumperOptions() { return NodeTools.default_dumperopts; }
+    public static DumperOptions getDefaultDumperOptions() {
+        init_default_dumperopts();
+        return NodeTools.default_dumperopts;
+    }
 
     //---------------------------------------------------
     /**
@@ -222,7 +233,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
      */
     public void setDumperOptions( final DumperOptions _d ) {
         this.dumperopt = _d;
-        assertTrue( this.dumperopt != null );
+        assertNotNull( this.dumperopt );
     }
 
     /**
@@ -233,10 +244,38 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
         if ( this.dumperopt != null )
             return this.dumperopt;
         else
-            return NodeTools.default_dumperopts;
+            return NodeTools.getDefaultDumperOptions();
     }
 
+    //==================================================================================
+
+    /**
+     * A utility to help "map" the values of the enum {@link org.ASUX.yaml.Enums.ScalarStyle}, into the "language" of SnakeYAML implementation (see <a>https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/DumperOptions.java</a>)
+     * @param _dopt a NotNull org.yaml.snakeyaml.DumperOptions object-reference
+     * @param _orgASUXQuoteType an enum value - see {@link org.ASUX.yaml.Enums.ScalarStyle}
+     */
+    public static void updateDumperOptions( final DumperOptions _dopt, final Enums.ScalarStyle _orgASUXQuoteType ) {
+        switch( _orgASUXQuoteType ) {
+            case DOUBLE_QUOTED: _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.DOUBLE_QUOTED );  break;
+            case SINGLE_QUOTED: _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.SINGLE_QUOTED );  break;
+            case LITERAL:       _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.LITERAL );        break;
+            case PLAIN:         _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.PLAIN );          break;
+            case FOLDED:        // _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
+            default:            _dopt.setDefaultScalarStyle( org.yaml.snakeyaml.DumperOptions.ScalarStyle.FOLDED );         break;
+        }
+    }
+    /**
+     * see {@link org.ASUX.yaml.YAMLImplementation#getNewSingleYAMLEntry}
+     */
+    @Override
+    public Node getNewSingleYAMLEntry( final String _newRootElemStr, final String _valElemStr ) {
+        // final DumperOptions dumperopts = NodeTools.getDefault DumperOptions();
+        return NodeTools.getNewSingleMap( _newRootElemStr, _valElemStr, this.getDumperOptions() );
+    }
+
+    //==================================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //==================================================================================
 
     /**
      *  <p>Example: For SnakeYAML-library based subclass of this, this should return DumperOptions.class</p>
@@ -250,7 +289,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
      *  <p>This is to be used primarily within org.ASUX.yaml.BatchCmdProcessor#onAnyCmd().</p>
      * @return instance/object that subclasses of {@link CmdInvoker} use, to configure YAML-Output (example: SnakeYAML uses DumperOptions objects)
      */
-    public Object getLibraryOptionsObject() { return NodeTools.default_dumperopts; }
+    public Object getLibraryOptionsObject() { return this.getDumperOptions(); }
 
     /**
      *  <p>Example: For SnakeYAML-library based subclass of this, this should return the reference to the instance of the class DumperOption</p>
@@ -261,7 +300,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
         final String HDR = CLASSNAME + ": setLibraryOptionsObject(): ";
         // System.err.println( HDR + "Method not implemented !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" );
         // throw new RuntimeException( HDR + "Method Not Implemeted" );
-        assertTrue( _o != null );
+        assertNotNull( _o );
         if (this.verbose) System.out.println( HDR +" about to convert object of type "+ _o.getClass().getName() +" into org.yaml.snakeyaml.DumperOptions" );
         final DumperOptions dopt = (DumperOptions) _o;
         this.setDumperOptions( dopt );
@@ -374,8 +413,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
         if ( _verbose ) System.out.println( "_dumperoptions = "+ _dumperoptions.getDefaultScalarStyle() +" "+ _dumperoptions.getDefaultFlowStyle() );
         if ( _verbose ) System.out.println( map );
         if ( _verbose ) System.out.println( "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" );
-        final org.yaml.snakeyaml.nodes.Node n = NodeTools.Map2Node( _verbose, map, _dumperoptions );
-        return n;
+        return /* final org.yaml.snakeyaml.nodes.Node n = */ NodeTools.Map2Node( _verbose, map, _dumperoptions );
     }
     //==============================================================================
     //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -386,8 +424,8 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
      *  @return a new java.lang.String object - it will NOT BE NULL.  Instead you'll get an exception.
      *  @throws Exception Any issue whatsoever when dealing with convering YAML/JSON content into Strings
      */
-    public static final String Node2YAMLString(final Node _node) throws Exception // !!!!!!!!!! ATTENTION !!!!!!!!! This is used for dumping YAML-content SPECIFICALLY for ____DEBUGGING___ purposes.
-    {                                               // !!!!!! Hence, No need for a DumperOptions parameter
+    public static String Node2YAMLString(final Node _node) throws Exception // !!!!!!!!!! ATTENTION !!!!!!!!! This is used for dumping YAML-content SPECIFICALLY for ____DEBUGGING___ purposes.
+    {                                                                       // !!!!!! Hence, No need for a DumperOptions parameter
         final String HDR = CLASSNAME + ": Node2YAMLString(): ";
         if ( _node == null )
             return "";
@@ -535,10 +573,9 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
         final ScalarNode keyN = new ScalarNode( Tag.STR, _key, null, null, _dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.PLAIN
         final ScalarNode valN = new ScalarNode( Tag.STR, _val, null, null, _dumperoptions.getDefaultScalarStyle() ); // DumperOptions.ScalarStyle.PLAIN
         final NodeTuple tuple = new NodeTuple( keyN, valN );
-        final java.util.List<NodeTuple> tuples = new LinkedList<NodeTuple>();
+        final java.util.List<NodeTuple> tuples = new LinkedList<>();
         tuples.add( tuple );
-        final MappingNode mapN = new MappingNode ( Tag.MAP, false, tuples, null, null, _dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
-        return mapN;
+        return /*final MappingNode mapN = */ new MappingNode ( Tag.MAP, false, tuples, null, null, _dumperoptions.getDefaultFlowStyle() ); // DumperOptions.FlowStyle.BLOCK
     }
 
     //==============================================================================
@@ -576,15 +613,15 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
      *  @param _keyStr the LHS to lookup within the MappingNode
      *  @return eiher null or an instance of org.yaml.snakeyaml.nodes.NodeTuple
      */
-    public static NodeTuple getNodeTuple( final MappingNode _mapnode, final String _keyStr ) {
-        final String HDR = CLASSNAME +": getNodeTuple(_mapnode,"+_keyStr+") ";
+    public static NodeTuple getNodeTuple( final MappingNode _mapnode, final String _keyStr )
+    {   // final String HDR = CLASSNAME +": getNodeTuple(_mapnode,"+_keyStr+") ";
         final java.util.List<NodeTuple> tuples = _mapnode.getValue();
         for( NodeTuple kv: tuples ) {
             final Node keyN = kv.getKeyNode();
             assertTrue( keyN instanceof ScalarNode );
             final ScalarNode scalarKeyN = (ScalarNode) keyN;
             final String keyAsStr = scalarKeyN.getValue();
-            assertTrue( keyAsStr != null );
+            assertNotNull( keyAsStr );
             if ( keyAsStr.equals(_keyStr) )
                 return kv;
             // final Node valN = kv.getValueNode();
@@ -608,8 +645,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
     public static Node getRHSNode( final MappingNode _mapnode, final String _keyStr ) {
         final NodeTuple nt = getNodeTuple( _mapnode, _keyStr );
         if ( nt != null ) {
-            final Node valN = nt.getValueNode();
-            return valN;
+            return /* final Node valN = */ nt.getValueNode();
         } else {
             return null;
         }
@@ -655,14 +691,13 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
     //==============================================================================
 
 
+     // *  @throws Exception Any issue whatsoever when dealing with convering YAML/JSON content into Strings and back (as part of lintremoval)
     /** Takes YAML input - as a org.yaml.snakeyaml.nodes.Node instance - and deep-clones it (by writing as a String-YAML and reading it back using {@link GenericYAMLScanner})
      *  @param _orig a org.yaml.snakeyaml.nodes.Node object, as generated by SnakeYAML library
      *  @return a new org.yaml.snakeyaml.nodes.Node object that has Nothing in common with _orig
-     *  @throws Exception Any issue whatsoever when dealing with convering YAML/JSON content into Strings and back (as part of lintremoval)
      */
-    public static final org.yaml.snakeyaml.DumperOptions deepClone( final org.yaml.snakeyaml.DumperOptions _orig ) throws Exception
-    {
-        final String HDR = CLASSNAME + ": deepClone(DumperOptions): ";
+    public static org.yaml.snakeyaml.DumperOptions deepClone( final org.yaml.snakeyaml.DumperOptions _orig )
+    {   // final String HDR = CLASSNAME + ": deepClone(DumperOptions): ";
         final org.yaml.snakeyaml.DumperOptions duopt = new org.yaml.snakeyaml.DumperOptions();
 // System.out.println( "_Original dumperoptions = "+ _orig.getDefaultScalarStyle() +" "+ _orig.getDefaultFlowStyle() );
         duopt.setAllowUnicode         ( _orig.isAllowUnicode() );
@@ -686,7 +721,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
      *  @return a new org.yaml.snakeyaml.nodes.Node object that has Nothing in common with _orig
      *  @throws Exception Any issue whatsoever when dealing with convering YAML/JSON content into Strings and back (as part of lintremoval)
      */
-    public static final Node deepClone( final Node _orig ) throws Exception // !!!!!!!!!!! ATTENTION !!!!!!!!!!! No need for any DumperOptions parameter here!
+    public static Node deepClone( final Node _orig ) throws Exception // !!!!!!!!!!! ATTENTION !!!!!!!!!!! No need for any DumperOptions parameter here!
     {
         final String HDR = CLASSNAME + ": deepClone(Node): ";
 
@@ -737,7 +772,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
     public static org.yaml.snakeyaml.nodes.SequenceNode ArrayList2Node( final boolean _verbose, final java.util.ArrayList<?> _yamlArr, final DumperOptions _dumperoptions ) throws Exception
     {
         final String HDR = CLASSNAME + ": ArrayList2Node(): ";
-        final java.util.LinkedList<Node> seqs = new java.util.LinkedList<Node>();
+        final java.util.LinkedList<Node> seqs = new java.util.LinkedList<>();
         final SequenceNode seqN = new SequenceNode( Tag.SEQ, false,     seqs,               null, null, _dumperoptions.getDefaultFlowStyle() );
 
         for ( Object o: _yamlArr ) {
@@ -771,7 +806,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
     public static org.yaml.snakeyaml.nodes.Node Map2Node( final boolean _verbose, final LinkedHashMap<String, Object> _yaml, final DumperOptions _dumperoptions ) throws Exception
     {
         final String HDR = CLASSNAME + ": Map2Node(): ";
-        final List<NodeTuple> nodetuple = new LinkedList<NodeTuple>();
+        final List<NodeTuple> nodetuple = new LinkedList<>();
         //--------------------------
         for (String key : _yaml.keySet()) {
 
@@ -804,14 +839,13 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
                 if ( _verbose ) System.out.println( HDR +": added SIMPLE-node= ["+ nnt +"]" );
 
             } else {
-                if ( _verbose ) System.out.println ( "\n"+ HDR +": "+ key +": "+ rhsStr.substring(0,rhsStr.length()>360?360:rhsStr.length()) );
+                if ( _verbose ) System.out.println ( "\n"+ HDR +": "+ key +": "+ rhsStr.substring(0, Math.min( rhsStr.length(), 360 ) ) );
                 throw new Exception( HDR +": incomplete code: Unable to handle rhs of type '"+ rhs.getClass().getName() +"'" );
             } // if-else   rhs instanceof   Map/Array/String/.. ..
 
         } // for loop
 
-        final Node newMN = new MappingNode( Tag.MAP, false,    nodetuple,    null, null, _dumperoptions.getDefaultFlowStyle() );
-        return newMN;
+        return /* final Node newMN = */ new MappingNode( Tag.MAP, false,    nodetuple,    null, null, _dumperoptions.getDefaultFlowStyle() );
 
     }
 
@@ -829,7 +863,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
     public static org.ASUX.common.Output.Object<?> Node2Map( final boolean _verbose, final Node _node ) throws Exception
     {
         final String HDR = CLASSNAME +" Node2Map(): ";
-        org.ASUX.common.Output.Object<?> outputObj= null;
+        org.ASUX.common.Output.Object<?> outputObj;
 
         // public enum org.yaml.snakeyaml.nodes.NodeId = scalar, sequence, mapping, anchor
         final NodeId nid = _node.getNodeId(); // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/nodes/NodeId.java
@@ -844,10 +878,10 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
             // https://bitbucket.org/asomov/snakeyaml/src/default/src/main/java/org/yaml/snakeyaml/nodes/NodeTuple.java
             if ( _verbose ) System.out.println( HDR +" Mapping-node has value/tuples= ["+ tuples + "]" );
 
-            final LinkedHashMap<String, Object> lhm = new LinkedHashMap<String, Object>();
+            final LinkedHashMap<String, Object> lhm = new LinkedHashMap<>();
             for( NodeTuple kv: tuples ) {
                 final Node key = kv.getKeyNode();
-                assertTrue( key.getNodeId() == NodeId.scalar ); // if this ass-ert fails, what scenario does that represent?
+                assertSame( key.getNodeId(), NodeId.scalar ); // if this ass-ert fails, what scenario does that represent?
                 final ScalarNode scalarKey = (ScalarNode) key;
                 String kstr = (scalarKey.getTag().startsWith("!")) ? (scalarKey.getTag()+" ") : "";
                 kstr += scalarKey.getValue();
@@ -880,8 +914,8 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
             if ( _verbose ) System.out.println( HDR +"SEQUENCE-node-id = ["+ seq.getNodeId() + "]" );
 
             final java.util.List<Node> lst = seq.getValue();
-            final ArrayList<Object> arrObj = new ArrayList<Object>();
-            final ArrayList<String> arrStr = new ArrayList<String>();
+            final ArrayList<Object> arrObj = new ArrayList<>();
+            final ArrayList<String> arrStr = new ArrayList<>();
             boolean bNonScalarsDetected = false;
             for( Node val: lst ) {
                 if ( val.getNodeId() == NodeId.scalar) {
@@ -899,11 +933,11 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
                 }
             } // for
             if ( bNonScalarsDetected ) {
-                final org.ASUX.common.Output.Object<java.lang.Object> o2 = new org.ASUX.common.Output.Object<java.lang.Object>();
+                final org.ASUX.common.Output.Object<java.lang.Object> o2 = new org.ASUX.common.Output.Object<>();
                 o2.setArray( arrObj );
                 outputObj = o2;
             } else {
-                final org.ASUX.common.Output.Object<String> o3 = new org.ASUX.common.Output.Object<String>();
+                final org.ASUX.common.Output.Object<String> o3 = new org.ASUX.common.Output.Object<>();
                 o3.setArray( arrStr );
                 outputObj = o3;
             }
@@ -919,7 +953,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
             // boolean scalarVal.isPlain()
             // lhm.put( ??What-is-the-Key??? , val );
             if ( _verbose ) System.out.println( HDR +" >>>>>>>>>>> returning a SCALAR !! = ["+ v + "]" );
-            final org.ASUX.common.Output.Object<String> o4 = new org.ASUX.common.Output.Object<String>();
+            final org.ASUX.common.Output.Object<String> o4 = new org.ASUX.common.Output.Object<>();
             o4.setString( v );
             return o4;
 
@@ -959,7 +993,7 @@ public class NodeTools extends org.ASUX.yaml.YAMLImplementation<Node>
      * org.yaml.snakeyaml.DumperOptions (like all SnakeYaml classes) does NOT have a toString() and does NOT implement java.io.Streamable.  Hence this static method to show what's inside a DumperOptions object.
      * @param _dumperopt a non-null object.  Null will cause NullPointerException
      */
-    public static final void printDumperOptions( DumperOptions _dumperopt ) {
+    public static void printDumperOptions( DumperOptions _dumperopt ) {
         System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 Enums.ScalarStyle="+ org.ASUX.yaml.Enums.ScalarStyle.list(" / ") );
         System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 this.dumperoptions.getDefaultScalarStyle()="+ _dumperopt.getDefaultScalarStyle() );
         System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 1 this.dumperoptions.getDefaultScalarStyle().getChar()="+ _dumperopt.getDefaultScalarStyle().getChar() );
